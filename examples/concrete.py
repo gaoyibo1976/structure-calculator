@@ -1,5 +1,5 @@
 import math
-from utils import calc_formula
+from 工程结构计算平台.utils.utils import calc_formula
 
 
 def get_conc(grade):
