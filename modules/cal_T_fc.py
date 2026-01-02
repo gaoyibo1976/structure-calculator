@@ -94,15 +94,16 @@ if __name__ == "__main__":
     flag, x, xb, Mu, σs, σsc = beam_T_fc(b, h, bf, hf, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc)
 
     # 按指定格式输出
-    text = f"""{'=' * 60}
-        1. {flag}
-        2. 相对受压区高度 x = {x}mm
-        3. 界限受压区高度 xb = {xb}mm
-        4. 抗弯承载力 Mu = {Mu}kN·m
-        5. 受拉钢筋应力 σs = {σs}N/mm²
-        6. 受压钢筋应力 σsc = {σsc}N/mm²
-        {'=' * 60}
-        """
+    text = f"""
+1. {flag}
+2. 相对受压区高度 x = {x}mm
+3. 界限受压区高度 xb = {xb}mm
+4. 抗弯承载力 Mu = {Mu}kN·m
+5. 受拉钢筋应力 σs = {σs}N/mm²
+6. 受压钢筋应力 σsc = {σsc}N/mm²
+{'=' * 60}"""
+
+    # 打印结果
     print(text)
 
     # 测试案例2
@@ -122,15 +123,15 @@ if __name__ == "__main__":
     # 调用计算（获取所有返回参数）
     flag, x, xb, Mu, σs, σsc = beam_T_fc(b, h, bf, hf, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc)
 
-    text = f"""{'=' * 60}
-        1. {flag}
-        2. 相对受压区高度 x = {x}mm
-        3. 界限受压区高度 xb = {xb}mm
-        4. 抗弯承载力 Mu = {Mu}kN·m
-        5. 受拉钢筋应力 σs = {σs}N/mm²
-        6. 受压钢筋应力 σsc = {σsc}N/mm²
-    {'=' * 60}
-    """
+    text = f"""
+1. {flag}
+2. 相对受压区高度 x = {x}mm
+3. 界限受压区高度 xb = {xb}mm
+4. 抗弯承载力 Mu = {Mu}kN·m
+5. 受拉钢筋应力 σs = {σs}N/mm²
+6. 受压钢筋应力 σsc = {σsc}N/mm²
+{'=' * 60}"""
+
     # 打印结果
     print(text)
 
@@ -151,20 +152,19 @@ if __name__ == "__main__":
     # 调用计算（获取所有返回参数）
     flag, x, xb, Mu, σs, σsc = beam_T_fc(b, h, bf, hf, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc)
 
-    text = f"""{'=' * 60}
-        1. {flag}
-        2. 相对受压区高度 x = {x}mm
-        3. 界限受压区高度 xb = {xb}mm
-        4. 抗弯承载力 Mu = {Mu}kN·m
-        5. 受拉钢筋应力 σs = {σs}N/mm²
-        6. 受压钢筋应力 σsc = {σsc}N/mm²
-        {'=' * 60}
-        """
+    text = f"""
+1. {flag}
+2. 相对受压区高度 x = {x}mm
+3. 界限受压区高度 xb = {xb}mm
+4. 抗弯承载力 Mu = {Mu}kN·m
+5. 受拉钢筋应力 σs = {σs}N/mm²
+6. 受压钢筋应力 σsc = {σsc}N/mm²
+{'=' * 60}"""
     # 打印结果
     print(text)
 
     # 测试案例4
-    print("【测试案例4:第二类T形截面（超筋）】")
+    print("【测试案例4:第二类T形截面】")
     b = 250
     h = 600
     bf = 800
@@ -180,14 +180,14 @@ if __name__ == "__main__":
     # 调用计算（获取所有返回参数）
     flag, x, xb, Mu, σs, σsc = beam_T_fc(b, h, bf, hf, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc)
 
-    text = f"""{'=' * 60}
-    1. {flag}
-    2. 相对受压区高度 x = {x}mm
-    3. 界限受压区高度 xb = {xb}mm
-    4. 抗弯承载力 Mu = {Mu}kN·m
-    5. 受拉钢筋应力 σs = {σs}N/mm²
-    6. 受压钢筋应力 σsc = {σsc}N/mm²
-    {'=' * 60}
-    """
+    text = f"""
+1. {flag}
+2. 相对受压区高度 x = {x}mm
+3. 界限受压区高度 xb = {xb}mm
+4. 抗弯承载力 Mu = {Mu}kN·m
+5. 受拉钢筋应力 σs = {σs}N/mm²
+6. 受压钢筋应力 σsc = {σsc}N/mm²
+{'=' * 60}"""
+
     # 打印结果
     print(text)
