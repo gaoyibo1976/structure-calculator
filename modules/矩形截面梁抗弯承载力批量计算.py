@@ -2,114 +2,112 @@ import pandas as pd
 import sys
 import os
 
-# ===================== 1. 动态获取项目根目录（核心修复：替代硬编码） =====================
-# 当前批量脚本的绝对路径（main目录下的批量计算文件）
-current_script_path = os.path.abspath(__file__)
-# 当前脚本所在目录（main目录）
-current_dir = os.path.dirname(current_script_path)
-# 项目根目录（main的上一级，即包含main、modules的目录）
-PROJECT_ROOT = os.path.dirname(current_dir)
-# 将根目录加入Python搜索路径（确保能找到modules、main目录）
-sys.path.append(PROJECT_ROOT)
+# 添加calc_rect_fc.py所在目录到Python路径
+modules_dir = os.path.dirname(r"D:\My Python\工程结构计算平台\modules\矩形截面梁抗弯承载力计算数据文件.xlsx")
+sys.path.append(modules_dir)
 
-# ===================== 2. 修正导入路径（核心修复：匹配实际文件位置） =====================
-try:
-    # 导入main目录下的「单筋矩形截面梁抗弯承载力.py」中的gen_report2
-    from main.单筋矩形截面梁抗弯承载力 import gen_report2
-    # 导入modules目录下的calc_rect_fc.py中的核心函数
-    from modules.calc_rect_fc import (
-        calc_formula,
-        gen_param,
-        calc_intermediate_params
-    )
-except ImportError as e:
-    raise ImportError(f"导入失败！请检查文件路径/函数名：{e}\n"
-                      f"项目根目录：{PROJECT_ROOT}\n"
-                      f"当前脚本目录：{current_dir}")
+# 导入计算函数
+from calc_rect_fc import beam_rect_fc
 
-# ===================== 3. 批量计算核心函数（完整逻辑） =====================
-def batch_calc_from_excel(excel_path, out_txt_path="out.txt"):
-    """
-    从Excel批量读取参数 → 调用modules/calc_rect_fc.py计算 → 输出到out.txt
-    :param excel_path: Excel参数文件路径（相对/绝对路径均可）
-    :param out_txt_path: 输出out格式文本文件路径
-    """
-    # 校验Excel文件是否存在
-    if not os.path.exists(excel_path):
-        raise FileNotFoundError(f"Excel文件不存在：{excel_path}")
 
-    # 读取Excel参数（sheet_name=0取第一个工作表）
+def batch_calculate_beam():
+    # 1. 数据文件路径
+    excel_path = r"D:\My Python\工程结构计算平台\modules\矩形截面梁抗弯承载力计算数据文件.xlsx"
+
+    # 2. 读取Excel数据（新增读取编号列）
     try:
-        df = pd.read_excel(excel_path, sheet_name=0)
+        df = pd.read_excel(excel_path)
+        # 提取编号列（假设列名为“编号”，若实际列名不同请修改此处）
+        id_list = df['编号'].tolist()
+        # 提取计算参数列
+        data_cols = [
+            'b', 'h', '混凝土强度等级C', '受拉钢筋强度等级',
+            '受压钢筋强度等级', '受拉钢筋面积As', '受拉钢筋as',
+            '受压钢筋面积As', '受压钢筋as'
+        ]
+        params_list = df[data_cols].values.tolist()
+
+        # 校验编号和参数数量一致
+        if len(id_list) != len(params_list):
+            print("❌ 编号列和参数列数据行数不匹配！")
+            return
+        print(f"✅ 成功读取 {len(params_list)} 条计算数据（含编号）")
     except Exception as e:
-        raise RuntimeError(f"读取Excel失败：{e}（请检查文件格式/列名）")
+        print(f"❌ 读取数据文件失败：{str(e)}")
+        return
 
-    # 校验Excel必要列（需与calc_rect_fc.py的参数要求一致）
-    required_cols = ['α1', 'fc', 'b', 'h0', 'a2', 'fy', 'As', 'M', 'ξb']
-    missing_cols = [col for col in required_cols if col not in df.columns]
-    if missing_cols:
-        raise ValueError(f"Excel缺少必需列：{missing_cols}\n"
-                         f"当前Excel列名：{list(df.columns)}")
+    # 3. 输出文件路径
+    output_dir = os.path.dirname(excel_path)
+    output_path = os.path.join(output_dir, "计算结果.out")
 
-    # 批量遍历计算
-    all_reports = []
-    total_rows = len(df)
-    all_reports.append(f"矩形截面梁抗弯承载力批量计算结果\n总计{total_rows}行数据\n{'='*80}")
-
-    for idx, row in df.iterrows():
-        row_num = idx + 1
-        try:
-            # 构造参数字典（直接传给calc_rect_fc.py的函数）
-            p = {
-                'α1': row['α1'],
-                'fc': row['fc'],
-                'b': row['b'],
-                'a2': row['a2'],
-                'fy': row['fy']
-            }
-            r = {
-                'h0': row['h0'],
-                'As': row['As'],
-                'ξb': row['ξb']
-            }
-            M = row['M']  # 计算弯矩
-
-            # 调用modules/calc_rect_fc.py中的中间参数计算函数
-            calc_intermediate_params(p, r, M)
-
-            # 调用gen_report2生成计算书（依赖calc_rect_fc.py的函数）
-            report = gen_report2(p, r, M, r['x_calc'])
-
-            # 记录该行结果
-            all_reports.append(f"\n===== 第{row_num}行（共{total_rows}行）计算结果 =====\n{report}")
-            print(f"✅ 第{row_num}行计算完成")
-
-        except Exception as e:
-            # 记录错误信息（不中断批量计算）
-            error_msg = f"\n===== 第{row_num}行计算失败 =====\n错误详情：{str(e)}\n{'='*50}"
-            all_reports.append(error_msg)
-            print(f"❌ 第{row_num}行计算失败：{e}")
-
-    # 输出到out格式文本文件（UTF-8编码避免中文乱码）
+    # 4. 循环计算并写入结果（新增编号输出）
     try:
-        with open(out_txt_path, 'w', encoding='utf-8') as f:
-            f.write("\n".join(all_reports))
-        print(f"\n📄 批量计算完成！结果文件路径：{os.path.abspath(out_txt_path)}")
-    except Exception as e:
-        raise RuntimeError(f"写入out文件失败：{e}")
+        with open(output_path, 'w', encoding='utf-8') as f:
+            # 遍历编号和对应参数（enumerate保留原索引，id_num是数据编号）
+            for idx, (id_num, params) in enumerate(zip(id_list, params_list), start=1):
+                try:
+                    # ========== 提取本次计算的输入参数 ==========
+                    b = params[0]  # 梁宽
+                    h = params[1]  # 梁高
+                    C_grade = params[2]  # 混凝土强度等级C
+                    steel_t_grade = params[3]  # 受拉钢筋强度等级
+                    steel_c_grade = params[4]  # 受压钢筋强度等级
+                    As = params[5]  # 受拉钢筋面积As
+                    as_ = params[6]  # 受拉钢筋重心距as
+                    As_prime = params[7]  # 受压钢筋面积As'
+                    as_prime = params[8]  # 受压钢筋重心距as'
 
-# ===================== 4. 调用入口（自定义Excel路径） =====================
+                    # 调用函数，获取返回的元组
+                    result_tuple = beam_rect_fc(*params)
+
+                    # 调试：打印元组结构（确认后可删除）
+                    print(f"第{idx}条（编号{id_num}）返回的元组内容：{result_tuple}")
+
+                    # ========== 提取计算结果参数（保留1位小数） ==========
+                    x = round(result_tuple[0], 1)  # 混凝土受压区高度
+                    xb = round(result_tuple[1], 1)  # 界限相对受压区高度ξbh0
+                    Mu = round(result_tuple[2], 1)  # 抗弯承载力
+                    σsc = round(result_tuple[3], 1)  # 受压钢筋应力
+                    σs = round(result_tuple[4], 1)  # 受拉钢筋应力
+
+                    # ========== 按统一风格拼接编号+输入参数+计算结果 ==========
+                    result_text = f"""【数据编号】{id_num}
+
+【输入参数】
+梁宽b={b}mm
+梁高h={h}mm
+混凝土强度等级C={C_grade}
+受拉钢筋强度等级={steel_t_grade}
+受压钢筋强度等级={steel_c_grade}
+受拉钢筋面积As={As}mm²
+受拉钢筋重心距as={as_}mm
+受压钢筋面积As'={As_prime}mm²
+受压钢筋重心距as'={as_prime}mm
+
+【计算结果】
+混凝土受压区高度x={x}mm
+界限相对受压区高度ξbh0={xb}mm
+抗弯承载力Mu={Mu}kN·m
+受压钢筋应力σs'={σsc:.1f}N/mm²
+受拉钢筋应力σs ={σs:.1f}N/mm²
+"""
+
+                    # 写入当前计算结果（加分隔符更易读）
+                    f.write(f"===== 第{idx}条计算结果 =====\n")
+                    f.write(result_text)
+                    f.write("\n----------------------------------------\n\n")  # 分隔线
+                    print(f"✅ 第{idx}条（编号{id_num}）计算完成")
+                except Exception as e:
+                    error_msg = f"第{idx}条（编号{id_num}）计算失败：{str(e)}\n\n"
+                    f.write(error_msg)
+                    print(f"❌ 第{idx}条（编号{id_num}）计算失败：{str(e)}")
+    except Exception as e:
+        print(f"❌ 写入结果文件失败：{str(e)}")
+        return
+
+    # 5. 计算结束
+    print(f"\n📄 所有计算完成！结果文件路径：{output_path}")
+
+
 if __name__ == "__main__":
-    # -------------------------- 请修改此处路径 --------------------------
-    # Excel参数文件路径（可填相对/绝对路径，示例：项目根目录下的「梁抗弯计算参数.xlsx」）
-    EXCEL_FILE_PATH = os.path.join(PROJECT_ROOT, "梁抗弯计算参数.xlsx")
-    # 输出out文件路径（默认项目根目录下的out.txt）
-    OUT_TXT_PATH = os.path.join(PROJECT_ROOT, "out.txt")
-    # -------------------------------------------------------------------
-
-    # 执行批量计算
-    try:
-        batch_calc_from_excel(EXCEL_FILE_PATH, OUT_TXT_PATH)
-    except Exception as e:
-        print(f"\n❌ 批量计算总异常：{e}")
-        sys.exit(1)
+    batch_calculate_beam()
