@@ -1,142 +1,89 @@
-# rebar.py 钢筋设计指标模块（GB 50010-2010/2015版）
-# 核心：嵌套字典存储+灵活获取函数，易维护、易调用
+# rebar.py 钢筋设计指标模块（新增ξb到返回字典）
+# 核心：ξb随钢筋参数字典返回，依赖β1（默认0.8，可自定义），对齐concrete.py风格
 
-# -------------------------- 1. 钢筋设计指标基础数据（嵌套字典，已删除ξb） --------------------------
-# 外层key：钢筋牌号 | 内层key：设计指标（规范统一命名）
-# 指标说明：
-# fy: 抗拉强度设计值 (N/mm²)
-# fyc: 抗压强度设计值 (N/mm²)
-# Es: 弹性模量 (N/mm²，×10^5)
-# fyk: 屈服强度标准值 (N/mm²)
+# -------------------------- 1. 钢筋基础参数（不变） --------------------------
 REBAR_PARAMS = {
-    "HPB300": {
-        "fy": 270,
-        "fyc": 270,
-        "Es": 2.1e5,
-        "fyk": 300
-    },
-    "HRB335": {
-        "fy": 300,
-        "fyc": 300,
-        "Es": 2.0e5,
-        "fyk": 335
-    },
-    "HRB400": {
-        "fy": 360,
-        "fyc": 360,
-        "Es": 2.0e5,
-        "fyk": 400
-    },
-    "HRB500": {
-        "fy": 435,
-        "fyc": 410,  # 抗压强度设计值≠抗拉（规范特殊规定）
-        "Es": 2.0e5,
-        "fyk": 500
-    },
-    "RRB400": {
-        "fy": 360,
-        "fyc": 360,
-        "Es": 2.0e5,
-        "fyk": 400
-    }
+    "HPB300": {"fy": 270, "fyc": 270, "Es": 2.1e5, "fyk": 300},
+    "HRB335": {"fy": 300, "fyc": 300, "Es": 2.0e5, "fyk": 335},
+    "HRB400": {"fy": 360, "fyc": 360, "Es": 2.0e5, "fyk": 400},
+    "HRB500": {"fy": 435, "fyc": 410, "Es": 2.0e5, "fyk": 500},
+    "RRB400": {"fy": 360, "fyc": 360, "Es": 2.0e5, "fyk": 400}
 }
 
+# 混凝土极限压应变（规范定值，作为全局常量）
+εcu = 0.0033
 
-# -------------------------- 2. 核心调用函数 --------------------------
-def get_rebar_params(grade, keys=None):
+
+# -------------------------- 2. 内部辅助：ξb计算（精简） --------------------------
+def _calc_xi_b(fy, Es, β1):
+    """内部辅助：计算ξb（不对外暴露）"""
+    return round(β1 / (1 + fy / (Es * εcu)), 3)
+
+
+# -------------------------- 3. 核心函数（新增ξb到返回字典） --------------------------
+def get_params(grade, β1=0.8):
     """
-    获取指定牌号钢筋的设计指标
-    :param grade: 钢筋牌号（如"HRB400"）
-    :param keys: 要获取的指标key，可选：
-                 - None → 返回该牌号全部指标字典
-                 - 单个字符串（如"fy"）→ 返回单个值
-                 - 列表（如["fy", "fyc"]）→ 返回元组
-    :return: 字典/单个值/元组（匹配keys格式）
-    :raises ValueError: 牌号不存在或指标key错误时抛出异常
+    获取指定牌号钢筋的完整指标字典（含ξb）
+    :param grade: 钢筋牌号（如"HRB400"，兼容小写）
+    :param β1: 混凝土等效矩形应力图形系数（默认0.8，C50及以下；C50~C80需传对应值）
+    :return: 完整指标字典（fy/fyc/Es/fyk/ξb）
+    :raises ValueError: 牌号错误时抛出异常
     """
-    # 第一步：校验钢筋牌号是否合法
-    grade = grade.strip().upper()  # 统一转大写，兼容小写输入（如"hrb400"）
+    # 统一转大写，兼容小写输入
+    grade = grade.strip().upper()
+
+    # 校验牌号合法性
     if grade not in REBAR_PARAMS:
         valid_grades = list(REBAR_PARAMS.keys())
-        raise ValueError(f"钢筋牌号错误！仅支持：{valid_grades}，输入为：{grade}")
+        raise ValueError(f"钢筋牌号错误！仅支持：{valid_grades}，输入：{grade}")
 
-    # 第二步：获取该牌号的全部指标
-    rebar_dict = REBAR_PARAMS[grade]
+    # 获取基础参数 + 计算ξb
+    rebar_dict = REBAR_PARAMS[grade].copy()
+    rebar_dict["ξb"] = _calc_xi_b(rebar_dict["fy"], rebar_dict["Es"], β1)
 
-    # 第三步：根据keys返回对应结果
-    if keys is None:
-        # 返回全部指标字典
-        return rebar_dict.copy()  # 返回副本，避免修改原字典
-    elif isinstance(keys, str):
-        # 返回单个指标值
-        if keys not in rebar_dict:
-            valid_keys = list(rebar_dict.keys())
-            raise ValueError(f"指标key错误！{grade}仅支持：{valid_keys}，输入为：{keys}")
-        return rebar_dict[keys]
-    elif isinstance(keys, (list, tuple)):
-        # 返回多个指标的元组
-        result = []
-        for k in keys:
-            if k not in rebar_dict:
-                valid_keys = list(rebar_dict.keys())
-                raise ValueError(f"指标key错误！{grade}仅支持：{valid_keys}，输入为：{k}")
-            result.append(rebar_dict[k])
-        return tuple(result)
-    else:
-        raise TypeError("keys仅支持：None/字符串/列表/元组")
+    return rebar_dict
 
 
-# -------------------------- 3. 辅助函数（可选，简化常用调用） --------------------------
+# -------------------------- 4. 快捷函数（新增get_rebar_xi_b） --------------------------
 def get_rebar_fy(grade):
-    """快捷获取抗拉强度设计值"""
-    return get_rebar_params(grade, "fy")
+    return get_params(grade)["fy"]
 
 
 def get_rebar_fyc(grade):
-    """快捷获取抗压强度设计值"""
-    return get_rebar_params(grade, "fyc")
+    return get_params(grade)["fyc"]
 
 
 def get_rebar_Es(grade):
-    """快捷获取弹性模量"""
-    return get_rebar_params(grade, "Es")
+    return get_params(grade)["Es"]
 
-# 新增ξb计算函数（可放在rebar.py或梁计算模块中）
-def calc_xi_b(fy, Es, β1=0.8, εcu=0.0033):
-    """
-    计算相对界限受压区高度ξb
-    :param fy: 钢筋抗拉强度设计值 (N/mm²)
-    :param Es: 钢筋弹性模量 (N/mm²)
-    :param β1: 等效矩形应力图形系数（C50及以下取0.8，C50~C80线性递减）
-    :param εcu: 混凝土极限压应变（规范取0.0033）
-    :return: ξb（相对界限受压区高度）
-    """
-    # 规范公式：ξb = β1 / [1 + fy/(Es×ecu)]
-    ξb = β1 / (1 + fy / (Es * εcu))
-    return round(ξb, 3)  # 保留3位小数，符合工程精度
 
-# 调用示例（结合rebar模块）
+def get_rebar_fyk(grade):
+    return get_params(grade)["fyk"]
+
+
+def get_rebar_xi_b(grade, β1=0.8):
+    """快捷获取ξb（支持自定义β1）"""
+    return get_params(grade, β1)["ξb"]
+
+
+# -------------------------- 5. 示例调用（展示ξb获取） --------------------------
 if __name__ == "__main__":
-    # 先获取钢筋的fy、Es，再计算ξb
-    fy = get_rebar_fy("HRB400")
-    Es = get_rebar_Es("HRB400")
-    xi_b = calc_xi_b(fy, Es)
-    print(f"HRB400的ξb（计算值）：{xi_b}")  # 输出：0.518（和规范值一致）
+    # 示例1：默认β1=0.8（C50及以下），获取含ξb的完整字典
+    hrb400_params = get_params("HRB400")
+    print("HRB400完整指标（含ξb）：", hrb400_params)
+    # 输出：{'fy': 360, 'fyc': 360, 'Es': 200000.0, 'fyk': 400, 'ξb': 0.518}
 
-# -------------------------- 4. 示例调用（测试用，已删除ξb相关） --------------------------
-if __name__ == "__main__":
-    # 示例1：获取HRB400的全部指标
-    hrb400_all = get_rebar_params("HRB400")
-    print("HRB400全部指标：", hrb400_all)
+    # 示例2：自定义β1=0.79（C55混凝土），获取ξb
+    hrb400_params_c55 = get_params("HRB400", β1=0.79)
+    print("HRB400（C55，β1=0.79）的ξb：", hrb400_params_c55["ξb"])
+    # 输出：0.512
 
-    # 示例2：仅获取HRB400的fy（抗拉）
-    hrb400_fy = get_rebar_params("HRB400", "fy")
-    print("HRB400抗拉强度设计值fy：", hrb400_fy)
+    # 示例3：快捷函数获取ξb
+    xi_b_hrb500 = get_rebar_xi_b("HRB500")
+    print("HRB500的ξb：", xi_b_hrb500)
+    # 输出：0.482
 
-    # 示例3：同时获取fy、fyc、Es（常用组合）
-    hrb400_core = get_rebar_params("HRB400", ["fy", "fyc", "Es"])
-    print("HRB400核心指标(fy, fyc, Es)：", hrb400_core)
-
-    # 示例4：快捷函数调用（更简洁）
-    hrb500_fyc = get_rebar_fyc("HRB500")
-    print("HRB500抗压强度设计值fyc：", hrb500_fyc)
+    # 示例4：一次性解包多个指标（含ξb），对齐concrete.py调用风格
+    hrb400 = get_params("HRB400")
+    fy, Es, ξb = hrb400["fy"], hrb400["Es"], hrb400["ξb"]
+    print(f"HRB400: fy={fy}, Es={Es}, ξb={ξb}")
