@@ -31,7 +31,7 @@ def beam_rect_fc(b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
             Mu = α1 * fc * b * x * (h0 - x / 2) / 1e6
         else:
             x = 2 * asc
-            σsc = (α1 * fc * b * x - fy * Asc) / Asc
+            σsc = (fy * Ast - α1 * fc * b * x) / Asc
             Mu = α1 * fc * b * 2 * asc * (h0 - asc) / 1e6 + σsc * Asc * (h0 - asc) / 1e6
     elif x > xb:
         σs = Es * εcu * (β1 * h0 / x - 1)
@@ -48,7 +48,7 @@ def beam_rect_fc(b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
 
 
 if __name__ == "__main__":
-    b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc = 300, 600, 30, "HRB400", "HRB400", 7000, 42.5, 1000,42.5
+    b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc = 800, 600, 40, "HRB400", "HRB400", 4000, 40, 804,40
     result = beam_rect_fc(b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc)
     x = round(result[0],1)
     xb = round(result[1],1)

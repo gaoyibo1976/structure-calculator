@@ -45,23 +45,23 @@ def get_params(grade, β1=0.8):
 
 
 # -------------------------- 4. 快捷函数（新增get_rebar_xi_b） --------------------------
-def get_rebar_fy(grade):
+def get_fy(grade):
     return get_params(grade)["fy"]
 
 
-def get_rebar_fyc(grade):
+def get_fyc(grade):
     return get_params(grade)["fyc"]
 
 
-def get_rebar_Es(grade):
+def get_Es(grade):
     return get_params(grade)["Es"]
 
 
-def get_rebar_fyk(grade):
+def get_fyk(grade):
     return get_params(grade)["fyk"]
 
 
-def get_rebar_xi_b(grade, β1=0.8):
+def get_xi_b(grade, β1=0.8):
     """快捷获取ξb（支持自定义β1）"""
     return get_params(grade, β1)["ξb"]
 
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     # 输出：0.512
 
     # 示例3：快捷函数获取ξb
-    xi_b_hrb500 = get_rebar_xi_b("HRB500")
+    xi_b_hrb500 = get_xi_b("HRB500")
     print("HRB500的ξb：", xi_b_hrb500)
     # 输出：0.482
 
