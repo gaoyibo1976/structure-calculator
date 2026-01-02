@@ -1,11 +1,11 @@
 #双筋矩形截面梁抗弯承载力计算函数
-import get_conc #从get_conc.py中调用混凝土材料参数函数
-import get_rebar #从get_bar.py中调用钢筋材料参数函数
+import concrete #导入concrete模块
+import rebar #导入rebar模块
 
 def beam_dr_rect_fc(b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
-    ftk, ft, fck, fc, Ec = get_concretEcore_indices(fcuk)
-    fy, ξb, Es = get_rebar(fy_grade)
-    fyc = get_rebar(fyc_grade)[0]
+    ftk, ft, fck, fc, Ec = concrete.get_concretEcore_indices(fcuk)
+    fy, ξb, Es = rebar.get_rebar(fy_grade)
+    fyc = rebar.get_rebar(fyc_grade)[0]
     α1 = 1.0
     h0 = h - ast
     ρmin = max(0.002, 0.45 * ft / fy)
