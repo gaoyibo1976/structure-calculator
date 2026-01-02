@@ -2,10 +2,12 @@
 import concrete #导入concrete模块
 import rebar #导入rebar模块
 
+
+
 def beam_dr_rect_fc(b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
     ftk, ft, fck, fc, Ec = concrete.get_concretEcore_indices(fcuk)
-    fy, ξb, Es = rebar.get_rebar(fy_grade)
-    fyc = rebar.get_rebar(fyc_grade)[0]
+    fy, ξb, Es = rebar.get_rebar_params(fy_grade, ["fy", "ξb", "Es"])
+    fyc = rebar.get_rebar_fyc(fyc_grade)
     α1 = 1.0
     h0 = h - ast
     ρmin = max(0.002, 0.45 * ft / fy)
