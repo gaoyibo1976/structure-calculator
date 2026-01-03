@@ -7,7 +7,7 @@ modules_dir = os.path.dirname(r"D:\My Python\工程结构计算平台\modules\�
 sys.path.append(modules_dir)
 
 # 导入计算函数
-from calc_rect_fc import beam_rect_fc
+from beam_rect_fc import beam_rect_fc
 
 
 def batch_calculate_beam():
