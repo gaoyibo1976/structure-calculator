@@ -3,7 +3,7 @@ import sys
 import os
 
 # 添加calc_rect_fc.py所在目录到Python路径
-modules_dir = os.path.dirname(r"D:\My Python\工程结构计算平台\modules\矩形截面梁抗弯承载力计算数据文件.xlsx")
+modules_dir = os.path.dirname(r"/结构计算程序\modules\矩形截面梁抗弯承载力计算数据文件.xlsx")
 sys.path.append(modules_dir)
 
 # 导入计算函数
@@ -12,7 +12,7 @@ from beam_rect_fc import beam_rect_fc
 
 def batch_calculate_beam():
     # 1. 数据文件路径
-    excel_path = r"D:\My Python\工程结构计算平台\modules\矩形截面梁抗弯承载力计算数据文件.xlsx"
+    excel_path = r"/结构计算程序\modules\矩形截面梁抗弯承载力计算数据文件.xlsx"
 
     # 2. 读取Excel数据（新增读取编号列）
     try:
