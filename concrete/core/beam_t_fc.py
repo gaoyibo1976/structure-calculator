@@ -2,10 +2,8 @@
 依据：GB 50010-2010
 """
 from sympy import sqrt
-import concrete
-import rebar
-from beam_rect_fc import beam_rect_fc
-
+from . import rebar,concrete
+from .beam_rect_fc import beam_rect_fc
 
 def beam_t_fc(b, h, bf, hf, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
     """

@@ -1,8 +1,10 @@
+import sys
 import os
 from datetime import datetime
 
-from beam_rect_fc import beam_rect_fc
-from report_beam_rect import report_beam_rect_fc
+#导入模块
+from concrete.core.beam_rect_fc import beam_rect_fc
+from concrete.core.report_beam_rect import report_beam_rect_fc
 
 # 矩形截面梁测试数据
 param = [
@@ -30,9 +32,9 @@ param = [
 count_rect = len(param)
 
 # 定义文件路径
-target_dir = r"/工程结构计算平台\output"  # 指定文件保存的目录
+target_dir = r"D:\My Python\结构计算程序\output"  # 指定文件保存的目录
 os.makedirs(target_dir, exist_ok=True) # 自动创建目录（不存在则创建，避免报错）
-file_name = "矩形截面抗弯承载力计算结果.out" # 定义文件名
+file_name = "矩形截面梁抗弯承载力计算结果.out" # 定义文件名
 file_path = os.path.join(target_dir, file_name) # 生成绝对路径
 
 # 定义计算时间
