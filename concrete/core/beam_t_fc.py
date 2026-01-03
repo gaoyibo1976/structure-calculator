@@ -5,7 +5,7 @@ from sympy import sqrt
 from . import rebar,concrete
 from .beam_rect_fc import beam_rect_fc
 
-def beam_t_fc(b, h, bf, hf, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
+def beam_t_fc(b, h, bf, hf, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc, γ0):
     """
     T形截面梁抗弯承载力计算
     :param b: 腹板宽度(mm)
@@ -42,7 +42,7 @@ def beam_t_fc(b, h, bf, hf, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
 
     # ========== 2. 抗弯承载力计算==========
     if fy * Ast <= α1 * fc * bf * hf:
-        x,xb,ξ,ξb,Mu,σs,σsc,check = beam_rect_fc(bf, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc)
+        x,xb,ξ,ξb,Mu,σs,σsc,check = beam_rect_fc(bf, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc, γ0)
         flag = "第一类T型截面"
     else:
         x = ((fy * Ast - fyc * Asc) / (α1 * fc) - (bf - b) * hf) / b
@@ -64,14 +64,16 @@ def beam_t_fc(b, h, bf, hf, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
         else:
             check = "×轴力平衡校验未通过!"
 
+    Mu = Mu / γ0
+
     # ========== 3. 整理计算结果 ==========
-    x = round(x, 1)
-    xb = round(xb, 1)
+    x = round(x, 2)
+    xb = round(xb, 2)
     ξ = round(x / h0,3)
     ξb = round(ξb,3)
     Mu = round(Mu, 2)
-    σs = round(σs, 1)
-    σsc = round(σsc, 1)
+    σs = round(σs, 2)
+    σsc = round(σsc, 2)
 
     # ========== 4. 返回结果 ==========
     result = (flag,x, xb, ξ, ξb, Mu, σs, σsc,check)

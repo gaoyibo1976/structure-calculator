@@ -10,7 +10,7 @@ from concrete.core.beam_rect_fc import beam_rect_fc
 
 def batch_calculate_beam():
     # 1. 数据文件路径
-    excel_path = r"D:\My Python\结构计算程序\input\梁抗弯承载力数据文件.xlsx"
+    excel_path = r"/input/梁抗弯承载力数据文件.xlsx"
 
     # 2. 读取Excel数据（新增读取编号列）
     try:

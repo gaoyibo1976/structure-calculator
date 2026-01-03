@@ -5,7 +5,7 @@ from sympy import sqrt
 from . import rebar,concrete
 
 
-def beam_rect_fc(b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
+def beam_rect_fc(b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc, γ0):
     """
     矩形截面梁抗弯承载力计算
     :param b: 腹板宽度(mm)
@@ -67,14 +67,16 @@ def beam_rect_fc(b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
     else:
         check = "×轴力平衡校验未通过!"
 
+    Mu = Mu / γ0
+
     # ========== 3. 整理计算结果 ==========
-    x = round(x, 1)
-    xb = round(xb, 1)
+    x = round(x, 2)
+    xb = round(xb, 2)
     ξ = round(x / h0,4)
     ξb = round(ξb,4)
     Mu = round(Mu, 2)
-    σs = round(σs, 1)
-    σsc = round(σsc, 1)
+    σs = round(σs, 2)
+    σsc = round(σsc, 2)
 
     # ========== 4. 返回结果 ==========
     result = (x,xb,ξ,ξb,Mu,σs,σsc,check)

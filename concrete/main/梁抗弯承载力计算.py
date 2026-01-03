@@ -1,103 +1,165 @@
 import sys
 import os
 from datetime import datetime
-import pandas as pd  # 新增：导入读取Excel的库
+import pandas as pd
 
-# 导入模块（保持不变）
+# 导入核心计算/报告模块
 from concrete.core.beam_rect_fc import beam_rect_fc
 from concrete.core.report_beam_rect import report_beam_rect_fc
+from concrete.core.beam_t_fc import beam_t_fc
+from concrete.core.report_beam_t import report_beam_t_fc
 
-# -------------------------- 核心修改：从Excel读取参数 --------------------------
-# 1. 定义Excel文件路径（与项目结构匹配，避免硬编码绝对路径）
-excel_path = r"D:\My Python\结构计算程序\input\梁抗弯承载力数据文件.xlsx"  # 用r前缀避免转义问题
+# -------------------------- 基础配置 --------------------------
+# 数据文件路径
+excel_input_path = r"D:\My Python\结构计算程序\input\梁抗弯承载力数据文件.xlsx"
+# 结果输出配置
+output_dir = r"D:\My Python\结构计算程序\output"
+excel_output_name = "梁抗弯承载力计算结果.xlsx"
+excel_output_path = os.path.join(output_dir, excel_output_name)
+# 抗震承载力调整系数
+γRE = 0.75
+# Excel列定义
+output_cols = {
+    "x_col": "受压区高度x",  # Q列
+    "mu_col": "抗弯承载力Mu",  # R列
+    "mue_col": "抗震承载力MuE",  # S列
+    "rs_col": "抗力效应比R/S"  # T列
+}
 
-# 2. 检查Excel文件是否存在（避免路径错误导致报错）
-if not os.path.exists(excel_path):
-    print(f"❌ 未找到Excel文件！请确认文件路径：{excel_path}")
-    sys.exit()  # 若文件不存在，终止程序并提示
+# -------------------------- 读取Excel A-P列数据 --------------------------
+# 检查文件存在性
+if not os.path.exists(excel_input_path):
+    print(f"❌ 未找到Excel文件！请确认文件路径：{excel_input_path}")
+    sys.exit()
 
-# 2. 检查Excel文件是否存在（避免路径错误导致报错）
-if not os.path.exists(excel_path):
-    print(f"❌ 未找到Excel文件！请确认文件路径：{excel_path}")
-    sys.exit()  # 若文件不存在，终止程序并提示
-
-# 3. 读取Excel数据（指定Sheet1，按列名匹配数据）
-# 列名对应关系：Excel列 → 计算参数（顺序需严格匹配）
-df = pd.read_excel(
-    excel_path,
-    sheet_name="Sheet1",  # 读取Excel的Sheet1工作表
-    usecols=["编号", "b", "h", "混凝土强度等级C", "受拉钢筋强度等级", "受压钢筋强度等级", "受拉钢筋面积As",
-             "受拉钢筋as", "受压钢筋面积As", "受压钢筋as"],
-    engine="openpyxl"  # 明确使用openpyxl引擎读取.xlsx文件
+# 读取A-P列输入数据（截面编号为字符型，无需额外转换）
+df_input = pd.read_excel(
+    excel_input_path,
+    sheet_name="Sheet1",
+    usecols=["截面编号", "截面类型", "b", "h", "bf", "hf",
+             "混凝土强度等级C", "受拉钢筋强度等级", "受压钢筋强度等级",
+             "受拉钢筋面积As", "受拉钢筋as", "受压钢筋面积As", "受压钢筋as",
+             "弯矩设计值M", "是否地震作用组合", "结构重要性系数γ0"],
+    engine="openpyxl",
+    dtype={"截面编号": str}  # 显式指定截面编号为字符型（可选，确保读入为字符）
 )
 
-# 4. 将Excel数据转换为原代码的param格式（列表+字典）
+# 构造param字典+结果数据列表
 param = []
-for index, row in df.iterrows():  # 逐行遍历Excel数据
-    # 跳过空行（若Excel中有空行，避免报错）
-    if pd.isna(row["编号"]):
-        continue
+result_data = []
 
-    # 按计算逻辑组织参数（顺序与beam_rect_fc函数参数要求一致）
+# 核心修改：适配字符型截面编号，仅处理空值，无多余str转换
+for index, row in df_input.iterrows():
+    # 1. 初始化结果数据（所有行都执行，包括空编号行）
+    result_item = row.to_dict()
+    for col in output_cols.values():
+        result_item[col] = None
+    result_data.append(result_item)
+
+    # 2. 构造param字典
     param_item = {
-        "sec_id": str(row["编号"]),  # sec_id使用Excel中的"编号"列（转为字符串避免格式问题）
+        "sec_num": row["截面编号"],
+        "sec_type": row["截面类型"],
+        "M": row["弯矩设计值M"],
+        "is_seismic": row["是否地震作用组合"],
+        "γ0": row["结构重要性系数γ0"],
         "calc_params": [
-            row["b"],  # 截面宽度b
-            row["h"],  # 截面高度h
-            row["混凝土强度等级C"],  # 混凝土强度等级
-            row["受拉钢筋强度等级"],  # 受拉钢筋强度等级
-            row["受压钢筋强度等级"],  # 受压钢筋强度等级
-            row["受拉钢筋面积As"],  # 受拉钢筋面积As
-            row["受拉钢筋as"],  # 受拉钢筋合力点到截面边缘距离as
-            row["受压钢筋面积As"],  # 受压钢筋面积As'
-            row["受压钢筋as"]  # 受压钢筋合力点到截面边缘距离as'
+            row["b"], row["h"], row["bf"], row["hf"],
+            row["混凝土强度等级C"], row["受拉钢筋强度等级"], row["受压钢筋强度等级"],
+            row["受拉钢筋面积As"], row["受拉钢筋as"],
+            row["受压钢筋面积As"], row["受压钢筋as"], row["结构重要性系数γ0"]
         ]
     }
     param.append(param_item)
 
-# 若Excel中无有效数据，提示并终止
+# 检查有效计算数据（可选：若需完全禁用此检查，可注释/删除）
 if len(param) == 0:
     print("❌ Excel文件中无有效计算数据，请检查Sheet1内容！")
     sys.exit()
 
-# -------------------------- 以下代码保持原逻辑不变 --------------------------
-count_rect = len(param)  # 计算参数组数（从Excel读取的有效行数）
+# -------------------------- 原有out结果文件生成（完全保留） --------------------------
+count_total = len(param)  # 所有行数量（含空编号行）
 
-# 定义结果文件路径（保持不变）
 target_dir = r"D:\My Python\结构计算程序\output"
-os.makedirs(target_dir, exist_ok=True)
+os.makedirs(target_dir, exist_ok=True) # 目标路径如不存在，则创建目录，如已存在，不报错
 file_name = "梁抗弯承载力计算结果.out"
 file_path = os.path.join(target_dir, file_name)
 
-# 定义计算时间（保持不变）
 dt = datetime.now()
 local_time = dt.strftime("%Y-%m-%d %H:%M:%S")
 
-# 写入结果文件并打印（保持不变）
 with open(file_path, "w", encoding="utf-8") as f:
     f.write(f"{'*' * 52}\n")
     f.write(f"计算时间：{local_time}\n")
-    f.write(f"共{count_rect}组矩形截面梁计算数据\n")  # 新增：显示数据组数
-    f.write(f"{'*' * 52}\n\n")
+    f.write(f"共{count_total}组截面梁计算数据\n")
+    f.write(f"{'*' * 52}\n")
 
-    num = 1  # 计算顺序序号
-    for item in param:
-        # 生成截面标识（使用Excel中的编号）
-        sec_id = f"序号{count_rect}.{num}      编号：{item['sec_id']}"
+    num = 1
+    for idx, item in enumerate(param):
+        sec_num = item["sec_num"] if not pd.isna(item["sec_num"]) else ""
+        γ0 = item["γ0"]
+        sec_num = f"序号：{count_total}.{num}      编号：{sec_num}      截面类型：{item['sec_type']}"
         calc_p = item["calc_params"]
+        report = ""
+        # 按截面类型调用计算函数
+        if item["sec_type"] == "矩形":
+            rect_calc_p = calc_p[0:2] + calc_p[4:]
+            result = beam_rect_fc(*rect_calc_p)
+            x = result[0]
+            Mu = result[4]
+            report = report_beam_rect_fc(sec_num, rect_calc_p, result)
 
-        # 调用计算函数（保持不变）
-        result = beam_rect_fc(*calc_p)
-        report = report_beam_rect_fc(sec_id, calc_p, result)
+        elif item["sec_type"] == "T形":
+            result = beam_t_fc(*calc_p)
+            x = result[1]
+            Mu = result[5]
+            report = report_beam_t_fc(sec_num, calc_p, result)
 
-        # 打印到控制台并写入文件（保持不变）
-        print(report)
-        f.write(report + "\n\n")  # 加空行优化阅读格式
+        else:
+            # 空/无效截面类型提示
+            report = f"【错误】序号：{num} 编号：{sec_num} 截面类型{item['sec_type']}不支持！仅支持矩形/T形"
+
+        MuE = Mu / γRE
+        M = item["M"]
+
+        if M == 0 or pd.isna(M):
+            R_S = 0
+        else:
+            is_seismic = item["is_seismic"]
+            R_S = MuE / M if is_seismic == 1 else Mu / M
+
+        # 填充Q-T列结果
+        result_data[idx][output_cols["x_col"]] = round(x, 3)
+        result_data[idx][output_cols["mu_col"]] = round(Mu, 2)
+        result_data[idx][output_cols["mue_col"]] = round(MuE, 2)
+        result_data[idx][output_cols["rs_col"]] = round(R_S,2)
+
+        # 写入out文件并打印
+        f.write(report + "\n")
+
+        # 控制台输出，如需恢复取消注释即可
+        # print(report)
+
         num += 1
 
-    end_str = f"\n【END】计算完成，共{count_rect}组数据，结果已保存至：{file_path}"
-    print(end_str)
+    end_str = f"【END】计算完成，共{count_total}组数据，结果已保存至：{file_path}"
+
+    # 控制台输出，如需恢复取消注释即可
+    # print(end_str)
+
     f.write(end_str)
 
-# 控制台提示（保持不变）
-print(f"\n✅ 计算结果已写入文件：{file_path}")
+# -------------------------- 生成Excel结果文件 --------------------------
+def save_excel_result(result_list, save_path):
+    """保存Excel结果（A-P列不变，Q-T列填结果）"""
+    df_result = pd.DataFrame(result_list)
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    with pd.ExcelWriter(save_path, engine="openpyxl") as writer:
+        df_result.to_excel(writer, sheet_name="Sheet1", index=False)
+    print(f"\n✅ Excel结果文件已保存至：{save_path}")
+
+# 执行保存
+save_excel_result(result_data, excel_output_path)
+
+# 控制台提示
+print(f"\n✅ 计算书文本文件已保存至：{file_path}")
