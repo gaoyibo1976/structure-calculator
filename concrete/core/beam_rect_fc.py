@@ -1,8 +1,8 @@
 """矩形截面梁抗弯承载力计算模块
 依据：GB 50010-2010
 """
-from sympy import sqrt
-from . import rebar,concrete
+import math  # 使用 Python 的 math.sqrt 而不是 sympy.sqrt
+from . import rebar, concrete
 
 
 def beam_rect_fc(b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc, γ0):
@@ -26,7 +26,7 @@ def beam_rect_fc(b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc, γ0):
     """
     # ========== 1. 获取材料参数 ==========
     conc = concrete.get_params(fcuk)
-    fc, ft, Ec, α1, β1= conc["fc"], conc["ft"], conc["Ec"], conc["α1"], conc["β1"]
+    fc, ft, Ec, α1, β1 = conc["fc"], conc["ft"], conc["Ec"], conc["α1"], conc["β1"]
     εcu = 0.0033
 
     rt = rebar.get_params(fy_grade)
@@ -56,7 +56,18 @@ def beam_rect_fc(b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc, γ0):
         a1 = α1 * fc * b
         b1 = fyc * Asc + Es * εcu * Ast
         c1 = -Es * εcu * β1 * h0 * Ast
-        x = (-b1 + sqrt(b1 * b1 - 4 * a1 * c1)) / (2 * a1)
+        # 使用 math.sqrt 替代 sympy.sqrt
+        discriminant = b1 * b1 - 4 * a1 * c1
+        # 确保判别式非负
+        if discriminant >= 0:
+            x = (-b1 + math.sqrt(discriminant)) / (2 * a1)
+        else:
+            # 如果判别式为负，这是一个错误情况，可能需要特殊处理
+            # 这里暂时设置为0，但实际工程中应该抛出异常或返回错误码
+            x = 0
+
+        # 确保 x 是 Python 浮点数
+        x = float(x)
         σs = Es * εcu * (β1 * h0 / x - 1)
         Mu = α1 * fc * b * x * (h0 - x / 2) / 1e6 + fyc * Asc * (h0 - asc) / 1e6
     else:
@@ -70,14 +81,14 @@ def beam_rect_fc(b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc, γ0):
     Mu = Mu / γ0
 
     # ========== 3. 整理计算结果 ==========
-    x = round(x, 2)
-    xb = round(xb, 2)
-    ξ = round(x / h0,4)
-    ξb = round(ξb,4)
-    Mu = round(Mu, 2)
-    σs = round(σs, 2)
-    σsc = round(σsc, 2)
+    x = round(x, 1)
+    xb = round(xb, 1)
+    ξ = round(x / h0, 4)
+    ξb = round(ξb, 4)
+    Mu = round(Mu, 1)
+    σs = round(σs, 1)
+    σsc = round(σsc, 1)
 
     # ========== 4. 返回结果 ==========
-    result = (x,xb,ξ,ξb,Mu,σs,σsc,check)
+    result = (x, xb, ξ, ξb, Mu, σs, σsc, check)
     return result

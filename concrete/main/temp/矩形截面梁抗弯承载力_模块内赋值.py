@@ -10,23 +10,11 @@ from concrete.core.report_beam_rect import report_beam_rect_fc
 param = [
     {
         "sec_id": " ",
-        "calc_params": [250, 500, 30, "HRB400", "HRB400", 1500, 42.5, 0, 42.5]
+        "calc_params": [250, 500, 30, "HRB400", "HRB400", 1500, 42.5, 0, 42.5, 1.0]
     },
     {
         "sec_id": " ",
-        "calc_params": [250, 500, 30, "HRB400", "HRB400", 1500, 42.5, 1000, 42.5]
-    },
-    {
-        "sec_id": " ",
-        "calc_params": [250, 500, 30, "HRB400", "HRB400", 2500, 42.5, 1000, 42.5]
-    },
-    {
-        "sec_id": " ",
-        "calc_params": [250, 500, 30, "HRB400", "HRB400", 7000, 42.5, 500, 42.5]
-    },
-    {
-        "sec_id": " ",
-        "calc_params": [250, 500, 30, "HRB400", "HRB400", 8000, 42.5, 500, 42.5]
+        "calc_params": [250, 500, 30, "HRB400", "HRB400", 8000, 42.5, 500, 42.5, 1.0]
     }
 ]
 count_rect = len(param)

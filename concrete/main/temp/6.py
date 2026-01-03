@@ -13,9 +13,9 @@ from concrete.core.report_beam_t import report_beam_t_fc
 
 # -------------------------- 基础配置 --------------------------
 # 数据文件路径
-EXCEL_INPUT_PATH = r"D:\My Python\结构计算程序\input\梁抗弯承载力数据文件.xlsx"
+EXCEL_INPUT_PATH = r"/input/梁抗弯承载力数据文件.xlsx"
 # 结果输出配置
-OUTPUT_DIR = r"D:\My Python\结构计算程序\output"
+OUTPUT_DIR = r"/output"
 EXCEL_OUTPUT_NAME = "梁抗弯承载力计算结果.xlsx"
 EXCEL_OUTPUT_PATH = os.path.join(OUTPUT_DIR, EXCEL_OUTPUT_NAME)
 # 抗震承载力调整系数

@@ -9,7 +9,7 @@ from concrete.core.report_beam_rect import report_beam_rect_fc
 
 # -------------------------- 核心修改：从Excel读取参数 --------------------------
 # 1. 定义Excel文件路径（与项目结构匹配，避免硬编码绝对路径）
-excel_path = r"/input/梁抗弯承载力数据文件.xlsx"  # 用r前缀避免转义问题
+excel_path = r"/input/梁抗弯承载力计算_表格输入数据.xlsx"  # 用r前缀避免转义问题
 
 # 2. 检查Excel文件是否存在（避免路径错误导致报错）
 if not os.path.exists(excel_path):
