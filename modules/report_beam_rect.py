@@ -2,8 +2,8 @@
 def report_beam_rect_fc(num,param,result):
     b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc = param
     x, xb, ξ, ξb, Mu, σs, σsc, check = result
-    report = f"""{'=' * 40}
-矩形截面梁已知配筋计算抗弯承载力 【编号：{num}】
+    report = f"""=====矩形截面梁已知配筋计算抗弯承载力=====
+{num}
 一.输入参数
 1.1 梁宽b：{b}mm
 1.2 梁高h：{h}mm

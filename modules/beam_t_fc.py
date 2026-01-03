@@ -7,7 +7,7 @@ import rebar
 from beam_rect_fc import beam_rect_fc
 
 
-def beam_T_fc(b, h, bf, hf, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
+def beam_t_fc(b, h, bf, hf, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
     """
     T形截面梁抗弯承载力计算
     :param b: 腹板宽度(mm)
