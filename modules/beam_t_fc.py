@@ -62,9 +62,9 @@ def beam_t_fc(b, h, bf, hf, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc):
             σsc = fyc
             Mu = α1 * fc * (b * x * (h0 - 0.5 * x) + (bf - b) * hf * (h0 - 0.5 * hf)) / 1e6 + fyc * Asc * (h0 - asc) / 1e6
         if σs * Ast - α1 * fc * (b * x + (bf - b) * hf) - σsc * Asc < 0.001:
-            check = "轴力平衡校验通过"
+            check = "✓轴力平衡校验通过!"
         else:
-            check = "轴力平衡校验未通过"
+            check = "×轴力平衡校验未通过!"
 
     # ========== 3. 整理计算结果 ==========
     x = round(x, 1)

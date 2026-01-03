@@ -1,4 +1,3 @@
-
 def report_beam_rect_fc(num,param,result):
     b, h, fcuk, fy_grade, fyc_grade, Ast, ast, Asc, asc = param
     x, xb, ξ, ξb, Mu, σs, σsc, check = result
@@ -22,5 +21,6 @@ def report_beam_rect_fc(num,param,result):
 2.5 抗弯承载力Mu={Mu}kN·m
 2.6 受压钢筋应力σs'={σsc:.1f}N/mm²
 2.7 受拉钢筋应力σs ={σs:.1f}N/mm²
-{check}"""
+{check}
+"""
     return report

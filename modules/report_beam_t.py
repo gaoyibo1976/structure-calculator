@@ -25,5 +25,6 @@ def report_beam_t_fc(num,param,result):
 2.6 抗弯承载力Mu={Mu}kN·m
 2.7 受压钢筋应力σs'={σsc:.1f}N/mm²
 2.8 受拉钢筋应力σs ={σs:.1f}N/mm²
-{check}"""
+{check}
+"""
     return report
