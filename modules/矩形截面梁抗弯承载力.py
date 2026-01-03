@@ -60,7 +60,7 @@ with open(file_path, "w", encoding="utf-8") as f:
         num += 1
 
     # 保留你原有结束标识
-    end_str = f"\n【END】】】"
+    end_str = f"\n【END】"
     print(end_str)
     # 结束标识也写入文件
     f.write(end_str)
