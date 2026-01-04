@@ -360,8 +360,9 @@ class BeamCalculationGUI(QMainWindow):
         right_group = QGroupBox("批量计算")
         right_layout = QVBoxLayout(right_group)
         
-        # 默认工作目录
-        self.default_work_dir = "D:\\My Python\\结构计算程序\\input\\"
+        # 默认工作目录：我的文档下的work目录
+        user_home = os.path.expanduser("~")
+        self.default_work_dir = os.path.join(user_home, "Documents", "work")
         if not os.path.exists(self.default_work_dir):
             os.makedirs(self.default_work_dir, exist_ok=True)
         
@@ -670,6 +671,13 @@ class BeamCalculationGUI(QMainWindow):
                 # 更新section_data
                 self.section_data[self.current_section_index] = updated_data
                 
+                # 更新列表框中的显示文本
+                if self.section_list.count() > self.current_section_index:
+                    list_item = self.section_list.item(self.current_section_index)
+                    if list_item:
+                        new_text = f"{self.current_section_index+1}-{sec_num}"
+                        list_item.setText(new_text)
+                
                 print(f"已保存当前截面数据到section_data: {updated_data}")
                 
             except Exception as e:
@@ -762,14 +770,14 @@ class BeamCalculationGUI(QMainWindow):
             self.result_text.append(error_msg + "\n")
     
     def save_data_to_file(self):
-        """将数据修改保存到数据文件，保留原文件样式"""
+        """将数据修改保存到数据文件"""
         try:
             # 先保存当前参数到section_data
             self.save_current_params_to_data()
             
             self.status_bar.showMessage("正在保存数据到文件...")
             
-            # 1. 将所有数据保存到临时Excel文件
+            # 获取文件路径
             file_path = self.file_input.text()
             
             # 读取原始文件，获取列名
@@ -828,71 +836,11 @@ class BeamCalculationGUI(QMainWindow):
                 # 将新行添加到DataFrame
                 df_new.loc[idx] = new_row
             
-            # 保存到临时文件
-            temp_file = file_path + ".temp.xlsx"
-            df_new.to_excel(temp_file, index=False)
+            # 直接保存到原文件
+            df_new.to_excel(file_path, index=False)
             
-            # 2. 使用openpyxl复制数据，保留原文件样式
-            from openpyxl import load_workbook
-            
-            # 加载原始文件和临时文件
-            wb_original = load_workbook(file_path)
-            ws_original = wb_original.active
-            
-            wb_temp = load_workbook(temp_file)
-            ws_temp = wb_temp.active
-            
-            # 获取原始文件的最大行列数
-            original_max_row = ws_original.max_row
-            original_max_col = ws_original.max_column
-            
-            # 获取临时文件的最大行列数
-            temp_max_row = ws_temp.max_row
-            temp_max_col = ws_temp.max_column
-            
-            # 3. 复制数据，保留原文件样式
-            # 遍历所有行和列，复制数据
-            for row in range(1, temp_max_row + 1):
-                for col in range(1, temp_max_col + 1):
-                    # 获取临时文件中的值
-                    cell_value = ws_temp.cell(row=row, column=col).value
-                    
-                    if row <= original_max_row and col <= original_max_col:
-                        # 原文件中已存在的单元格，直接更新值，保留样式
-                        ws_original.cell(row=row, column=col).value = cell_value
-                    else:
-                        # 原文件中不存在的单元格（新增行或列）
-                        # 对于新增行，复制上一行的样式
-                        if row > original_max_row:
-                            # 复制上一行的样式
-                            for c in range(1, original_max_col + 1):
-                                # 获取上一行的样式
-                                source_cell = ws_original.cell(row=original_max_row, column=c)
-                                new_cell = ws_original.cell(row=row, column=c)
-                                
-                                # 复制样式
-                                new_cell.font = source_cell.font
-                                new_cell.border = source_cell.border
-                                new_cell.fill = source_cell.fill
-                                new_cell.alignment = source_cell.alignment
-                                new_cell.number_format = source_cell.number_format
-                                new_cell.protection = source_cell.protection
-                                
-                                # 设置值
-                                if c <= temp_max_col:
-                                    new_cell.value = ws_temp.cell(row=row, column=c).value
-                        
-                        # 对于新增列，暂时不处理，使用默认样式
-                        if col > original_max_col:
-                            ws_original.cell(row=row, column=col).value = cell_value
-            
-            # 4. 保存原始文件
-            wb_original.save(file_path)
-            
-            # 5. 删除临时文件
-            os.remove(temp_file)
-            
-            self.status_bar.showMessage(f"数据已成功保存到文件: {os.path.basename(file_path)}")
+            # 显示保存成功信息
+            self.status_bar.showMessage(f"数据已成功保存到文件: {file_path}")
             self.result_text.append(f"数据已成功保存到文件: {file_path}\n")
             
         except Exception as e:
@@ -1002,7 +950,10 @@ class BeamCalculationGUI(QMainWindow):
                     with open(report_result_file, "w", encoding="utf-8") as f:
                         f.write(self.result_text.toPlainText())
                     
-                    self.result_text.append(f"\n计算书已保存到: {report_result_file}\n")
+                    # 显示保存成功信息
+                    save_msg = f"计算书已保存到: {report_result_file}"
+                    self.status_bar.showMessage(save_msg)
+                    self.result_text.append(f"\n{save_msg}\n")
                 
                 # 滚动到顶部
                 self.result_text.verticalScrollBar().setValue(0)
@@ -1085,6 +1036,10 @@ class BeamCalculationGUI(QMainWindow):
                 report_result_file = os.path.join(data_dir, f"{result_filename}.out")
                 with open(report_result_file, "w", encoding="utf-8") as f:
                     f.write(self.result_text.toPlainText())
+                
+                # 显示保存成功信息
+                save_msg = f"结果已保存到: {data_dir}，Excel文件: {result_filename}.xlsx，计算书文件: {result_filename}.out"
+                self.status_bar.showMessage(save_msg)
             
             # 显示总结
             summary = f"\n=====计算总结=====\n"
