@@ -1,4 +1,6 @@
 import re
+import math
+from typing import Tuple, Any
 
 # =========== 线性内插函数 ============
 def linear_interp(x, x1, x2, y1, y2):
@@ -56,3 +58,39 @@ def calc_formula(f, p, prec=None):
         exec_f = re.sub(rf"\b{k}\b", str(v), exec_f)
     res = eval(exec_f)
     return res, fp, fe
+
+# ========== 解二次方程函数 ============
+def solve_quadratic_equation(a: float, b: float, c: float) -> float:
+    """
+    解二次方程 ax² + bx + c = 0
+    :param a: 二次项系数
+    :param b: 一次项系数
+    :param c: 常数项
+    :return: float - 正实根（如果有），否则返回0
+    """
+    discriminant: float = b * b - 4 * a * c
+    if discriminant >= 0:
+        sqrt_discriminant: float = math.sqrt(discriminant)
+        x1: float = (-b + sqrt_discriminant) / (2 * a)
+        x2: float = (-b - sqrt_discriminant) / (2 * a)
+        # 返回正实根
+        return max(x1, x2) if max(x1, x2) > 0 else 0
+    else:
+        # 判别式为负，返回0
+        return 0
+
+# ========== 格式化计算结果函数 ============
+def format_calculation_result(result: Tuple[Any, ...], decimal_places: int = 1) -> Tuple[Any, ...]:
+    """
+    格式化计算结果
+    :param result: 计算结果元组
+    :param decimal_places: 保留的小数位数
+    :return: tuple - 格式化后的结果
+    """
+    formatted_result = []
+    for x in result:
+        if isinstance(x, (int, float)):
+            formatted_result.append(round(float(x), decimal_places))
+        else:
+            formatted_result.append(x)
+    return tuple(formatted_result)
