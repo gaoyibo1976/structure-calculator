@@ -9,9 +9,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 
 # 导入核心计算/报告模块
 from concrete.core.beam_rect_fc import beam_rect_fc
-from concrete.core.report_beam_rect import report_beam_rect_fc
 from concrete.core.beam_t_fc import beam_t_fc
-from concrete.core.report_beam_t import report_beam_t_fc
+from concrete.core.report_beam import report_beam_rect_fc, report_beam_t_fc
 
 # 导入配置和工具函数
 from concrete.config import (
@@ -35,10 +34,11 @@ def calculate_single_item(item, index, total_count):
     :param item: 计算参数项
     :param index: 索引
     :param total_count: 总数量
-    :return: tuple - (x, Mu, report, error_msg)
+    :return: tuple - (x, Mu, M, rs_ratio, report, error_msg)
     """
     sec_num = item["sec_num"] if not pd.isna(item["sec_num"]) else ""
     gamma_0 = item["γ0"]
+    M = item["M"]  # 弯矩设计值
     sec_num_display = f"序号：{total_count}.{index + 1}      编号：{sec_num}      截面类型：{item['sec_type']}"
     calc_p = item["calc_params"]
 
@@ -48,25 +48,37 @@ def calculate_single_item(item, index, total_count):
             result = beam_rect_fc(*rect_calc_p)
             x = result[0]
             Mu = result[4]
-            report = report_beam_rect_fc(sec_num_display, rect_calc_p, result)
-            return x, Mu, report, None  # 最后一个参数是错误信息
+            # 计算抗力效应比R/S：地震作用组合时使用MuE/M，否则使用Mu/M
+            is_seismic = item["is_seismic"]
+            MuE = Mu / GAMMA_RE
+            rs_ratio = (MuE / M if is_seismic == 1 else Mu / M) if M > 0 else 0
+            # 创建包含M和rs_ratio的扩展结果
+            extended_result = result + (M, rs_ratio)
+            report = report_beam_rect_fc(sec_num_display, rect_calc_p, extended_result)
+            return x, Mu, M, rs_ratio, report, None
 
         elif item["sec_type"] == "T形":
             result = beam_t_fc(*calc_p)
             x = result[1]
             Mu = result[5]
-            report = report_beam_t_fc(sec_num_display, calc_p, result)
-            return x, Mu, report, None
+            # 计算抗力效应比R/S：地震作用组合时使用MuE/M，否则使用Mu/M
+            is_seismic = item["is_seismic"]
+            MuE = Mu / GAMMA_RE
+            rs_ratio = (MuE / M if is_seismic == 1 else Mu / M) if M > 0 else 0
+            # 创建包含M和rs_ratio的扩展结果
+            extended_result = result + (M, rs_ratio)
+            report = report_beam_t_fc(sec_num_display, calc_p, extended_result)
+            return x, Mu, M, rs_ratio, report, None
 
         else:
             error_msg = f"第{index + 1}行：截面类型'{item['sec_type']}'不支持"
             report = f"【错误】{error_msg}"
-            return 0, 0, report, error_msg
+            return 0, 0, 0, 0, report, error_msg
 
     except Exception as e:
         error_msg = f"第{index + 1}行：{str(e)}"
         report = f"【错误】{error_msg}"
-        return 0, 0, report, error_msg
+        return 0, 0, 0, 0, report, error_msg
 
 
 def main():
@@ -110,28 +122,21 @@ def main():
         # 计算每行数据
         for idx, item in enumerate(param):
             # 计算单个数据项
-            x, Mu, report, error_msg = calculate_single_item(item, idx, len(param))
+            x, Mu, M, rs_ratio, report, error_msg = calculate_single_item(item, idx, len(param))
 
             # 记录错误
             if error_msg:
                 error_count += 1
                 print(f"  ⚠️ {error_msg}")
 
-            # 计算抗震承载力和抗力效应比
+            # 计算抗震承载力
             MuE = Mu / GAMMA_RE
-            M = item["M"]
-
-            if M == 0 or pd.isna(M):
-                R_S = 0
-            else:
-                is_seismic = item["is_seismic"]
-                R_S = MuE / M if is_seismic == 1 else Mu / M
 
             # 填充Q-T列结果
             result_data[idx][OUTPUT_COLS["x_col"]] = round(x, 3)
             result_data[idx][OUTPUT_COLS["mu_col"]] = round(Mu, 2)
             result_data[idx][OUTPUT_COLS["mue_col"]] = round(MuE, 2)
-            result_data[idx][OUTPUT_COLS["rs_col"]] = round(R_S, 2)
+            result_data[idx][OUTPUT_COLS["rs_col"]] = round(rs_ratio, 2)
 
             # 写入out文件
             f.write(report + "\n")
