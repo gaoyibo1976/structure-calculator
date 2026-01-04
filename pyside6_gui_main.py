@@ -823,7 +823,7 @@ class BeamCalculationGUI(QMainWindow):
             self.result_text.append(error_msg + "\n")
     
     def save_data_to_file(self):
-        """将数据修改保存到数据文件，只回写读取过的单元格"""
+        """将数据修改保存到数据文件，只回写A-P列（原始数据），保持原文件样式"""
         try:
             # 先保存当前参数到section_data
             self.save_current_params_to_data()
@@ -833,97 +833,94 @@ class BeamCalculationGUI(QMainWindow):
             # 获取文件路径
             file_path = self.file_input.text()
             
-            # 读取原始文件，获取完整的数据和列名
-            df_original = pd.read_excel(file_path)
+            # 使用openpyxl加载文件，保持样式
+            from openpyxl import load_workbook
+            wb = load_workbook(file_path)
+            ws = wb.active
             
-            # 创建一个新的DataFrame，使用原始文件的完整数据作为基础
-            df_new = df_original.copy()
+            # 定义允许修改的列范围：A-P列（Excel列索引1-16，因为Excel从1开始计数）
+            allowed_cols = list(range(1, 17))  # A-P列对应1-16
             
-            # 只更新读取过的数据行和列
+            # 定义列索引到数据的映射关系（A-P列）
+            col_data_mapping = {
+                1: "截面编号",        # A列
+                2: "结构重要性系数γ0",  # B列
+                3: "弯矩设计值M",     # C列
+                4: "是否地震作用组合",    # D列
+                5: "截面类型",        # E列
+                6: "b",             # F列
+                7: "h",             # G列
+                8: "bf",            # H列
+                9: "hf",            # I列
+                10: "混凝土强度等级C",    # J列
+                11: "受拉钢筋强度等级",   # K列
+                12: "受压钢筋强度等级",   # L列
+                13: "受拉钢筋面积As",    # M列
+                14: "受拉钢筋as",     # N列
+                15: "受压钢筋面积As",    # O列
+                16: "受压钢筋as"      # P列
+            }
+            
+            # 处理每一行数据
             for idx, data in enumerate(self.section_data):
-                # 确保索引不超出原始数据范围
-                if idx < len(df_new):
-                    # 只更新我们读取过的列
-                    for col in df_new.columns:
-                        # 根据列名获取对应的数据，只更新我们读取过的单元格
-                        if col == "截面编号":
-                            df_new.at[idx, col] = data.get("截面编号", data.get("sec_num", df_new.at[idx, col]))
-                        elif col == "结构重要性系数γ0":
-                            df_new.at[idx, col] = data.get("γ0", data.get("gamma0", data.get("结构重要性系数", df_new.at[idx, col])))
-                        elif col == "弯矩设计值M":
-                            df_new.at[idx, col] = data.get("M", data.get("弯矩设计值", data.get("弯矩", df_new.at[idx, col])))
-                        elif col == "是否地震作用组合":
-                            df_new.at[idx, col] = data.get("is_seismic", data.get("是否地震", data.get("地震作用组合", data.get("是否地震作用组合", df_new.at[idx, col]))))
-                        elif col == "截面类型":
-                            df_new.at[idx, col] = data.get("sec_type", data.get("截面类型", df_new.at[idx, col]))
-                        elif col == "b":
-                            df_new.at[idx, col] = data.get("b", data.get("截面宽度", df_new.at[idx, col]))
-                        elif col == "h":
-                            df_new.at[idx, col] = data.get("h", data.get("截面高度", df_new.at[idx, col]))
-                        elif col == "bf":
-                            df_new.at[idx, col] = data.get("bf", data.get("受压翼缘宽度", df_new.at[idx, col]))
-                        elif col == "hf":
-                            df_new.at[idx, col] = data.get("hf", data.get("受压翼缘厚度", df_new.at[idx, col]))
-                        elif col == "混凝土强度等级C":
-                            df_new.at[idx, col] = data.get("fcuk", data.get("混凝土强度等级", df_new.at[idx, col]))
-                        elif col == "受拉钢筋强度等级":
-                            df_new.at[idx, col] = data.get("fy_grade", data.get("受拉钢筋强度等级", data.get("钢筋强度等级", df_new.at[idx, col])))
-                        elif col == "受压钢筋强度等级":
-                            df_new.at[idx, col] = data.get("fyc_grade", data.get("受压钢筋强度等级", df_new.at[idx, col]))
-                        elif col == "受拉钢筋面积As":
-                            df_new.at[idx, col] = data.get("ast", data.get("As", data.get("受拉钢筋面积", data.get("受拉钢筋面积As", df_new.at[idx, col]))))
-                        elif col == "受拉钢筋as":
-                            df_new.at[idx, col] = data.get("as_t", data.get("as", data.get("受拉钢筋as", df_new.at[idx, col])))
-                        elif col == "受压钢筋面积As":
-                            df_new.at[idx, col] = data.get("asc", data.get("As'", data.get("受压钢筋面积", data.get("受压钢筋面积As", df_new.at[idx, col]))))
-                        elif col == "受压钢筋as":
-                            df_new.at[idx, col] = data.get("as_c", data.get("as'", data.get("受压钢筋as", data.get("受压钢筋as'", df_new.at[idx, col]))))
-                        # 对于其他列，保持原始值不变
-                else:
-                    # 新增行，使用完整的默认数据
-                    new_row = {}
-                    for col in df_new.columns:
-                        if col == "截面编号":
-                            new_row[col] = data.get("截面编号", data.get("sec_num", f"截面{idx+1}"))
-                        elif col == "结构重要性系数γ0":
-                            new_row[col] = data.get("γ0", data.get("gamma0", data.get("结构重要性系数", 1.0)))
-                        elif col == "弯矩设计值M":
-                            new_row[col] = data.get("M", data.get("弯矩设计值", data.get("弯矩", 250)))
-                        elif col == "是否地震作用组合":
-                            new_row[col] = data.get("is_seismic", data.get("是否地震", data.get("地震作用组合", data.get("是否地震作用组合", 0))))
-                        elif col == "截面类型":
-                            new_row[col] = data.get("sec_type", data.get("截面类型", "矩形"))
-                        elif col == "b":
-                            new_row[col] = data.get("b", data.get("截面宽度", 300))
-                        elif col == "h":
-                            new_row[col] = data.get("h", data.get("截面高度", 600))
-                        elif col == "bf":
-                            new_row[col] = data.get("bf", data.get("受压翼缘宽度", 0))
-                        elif col == "hf":
-                            new_row[col] = data.get("hf", data.get("受压翼缘厚度", 0))
-                        elif col == "混凝土强度等级C":
-                            new_row[col] = data.get("fcuk", data.get("混凝土强度等级", 30))
-                        elif col == "受拉钢筋强度等级":
-                            new_row[col] = data.get("fy_grade", data.get("受拉钢筋强度等级", data.get("钢筋强度等级", "HRB400")))
-                        elif col == "受压钢筋强度等级":
-                            new_row[col] = data.get("fyc_grade", data.get("受压钢筋强度等级", "HRB400"))
-                        elif col == "受拉钢筋面积As":
-                            new_row[col] = data.get("ast", data.get("As", data.get("受拉钢筋面积", data.get("受拉钢筋面积As", 1500))))
-                        elif col == "受拉钢筋as":
-                            new_row[col] = data.get("as_t", data.get("as", data.get("受拉钢筋as", 42.5)))
-                        elif col == "受压钢筋面积As":
-                            new_row[col] = data.get("asc", data.get("As'", data.get("受压钢筋面积", data.get("受压钢筋面积As", 0))))
-                        elif col == "受压钢筋as":
-                            new_row[col] = data.get("as_c", data.get("as'", data.get("受压钢筋as", data.get("受压钢筋as'", 42.5))))
-                        else:
-                            # 对于其他列，使用默认值或空值
-                            new_row[col] = data.get(col, "")
+                # 转换为Excel行号（从2开始，因为表头占1行）
+                excel_row = idx + 2
+                
+                # 确保行存在，如果不存在则添加，使用insert_rows保持样式
+                while excel_row > ws.max_row:
+                    # 复制前一行的样式到新行
+                    ws.insert_rows(ws.max_row + 1)
+                    # 清空新行的A-P列内容，但保留样式
+                    for col_idx in allowed_cols:
+                        ws.cell(row=excel_row, column=col_idx, value="")
+                
+                # 只更新A-P列
+                for col_idx in allowed_cols:
+                    # 获取对应的数据键
+                    data_key = col_data_mapping[col_idx]
                     
-                    # 添加新行到DataFrame
-                    df_new.loc[idx] = new_row
+                    # 根据数据键获取对应的值
+                    cell_value = data.get(data_key, "")
+                    
+                    # 特殊处理一些字段
+                    if data_key == "结构重要性系数γ0":
+                        cell_value = data.get("γ0", data.get("gamma0", data.get("结构重要性系数", 1.0)))
+                    elif data_key == "弯矩设计值M":
+                        cell_value = data.get("M", data.get("弯矩设计值", data.get("弯矩", 250)))
+                    elif data_key == "是否地震作用组合":
+                        cell_value = data.get("is_seismic", data.get("是否地震", data.get("地震作用组合", data.get("是否地震作用组合", 0))))
+                    elif data_key == "截面类型":
+                        cell_value = data.get("sec_type", data.get("截面类型", "矩形"))
+                    elif data_key == "b":
+                        cell_value = data.get("b", data.get("截面宽度", 300))
+                    elif data_key == "h":
+                        cell_value = data.get("h", data.get("截面高度", 600))
+                    elif data_key == "bf":
+                        cell_value = data.get("bf", data.get("受压翼缘宽度", 0))
+                    elif data_key == "hf":
+                        cell_value = data.get("hf", data.get("受压翼缘厚度", 0))
+                    elif data_key == "混凝土强度等级C":
+                        cell_value = data.get("fcuk", data.get("混凝土强度等级", 30))
+                    elif data_key == "受拉钢筋强度等级":
+                        cell_value = data.get("fy_grade", data.get("受拉钢筋强度等级", data.get("钢筋强度等级", "HRB400")))
+                    elif data_key == "受压钢筋强度等级":
+                        cell_value = data.get("fyc_grade", data.get("受压钢筋强度等级", "HRB400"))
+                    elif data_key == "受拉钢筋面积As":
+                        cell_value = data.get("ast", data.get("As", data.get("受拉钢筋面积", data.get("受拉钢筋面积As", 1500))))
+                    elif data_key == "受拉钢筋as":
+                        cell_value = data.get("as_t", data.get("as", data.get("受拉钢筋as", 42.5)))
+                    elif data_key == "受压钢筋面积As":
+                        cell_value = data.get("asc", data.get("As'", data.get("受压钢筋面积", data.get("受压钢筋面积As", 0))))
+                    elif data_key == "受压钢筋as":
+                        cell_value = data.get("as_c", data.get("as'", data.get("受压钢筋as", data.get("受压钢筋as'", 42.5))))
+                    elif data_key == "截面编号":
+                        cell_value = data.get("截面编号", data.get("sec_num", f"截面{idx+1}"))
+                    
+                    # 设置单元格值，openpyxl会保持原有样式
+                    ws.cell(row=excel_row, column=col_idx, value=cell_value)
             
-            # 直接保存到原文件
-            df_new.to_excel(file_path, index=False)
+            # 保存文件，保持样式
+            wb.save(file_path)
             
             # 显示保存成功信息
             self.status_bar.showMessage(f"数据已成功保存到文件: {file_path}")
