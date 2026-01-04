@@ -620,8 +620,11 @@ class BeamCalculationGUI(QMainWindow):
                 if not sec_num:
                     sec_num = f"截面{self.current_section_index+1}"
                 
-                # 更新数据字典
-                updated_data = {
+                # 获取原始数据的所有列，确保只更新读取的单元格
+                data_dict = self.section_data[self.current_section_index].copy()
+                
+                # 更新数据字典，只更新已读取的字段
+                data_dict.update({
                     "截面编号": sec_num,
                     "sec_num": sec_num,
                     "γ0": gamma0,
@@ -666,10 +669,10 @@ class BeamCalculationGUI(QMainWindow):
                     "as'": as_c,
                     "受压钢筋as": as_c,
                     "受压钢筋as'": as_c
-                }
+                })
                 
                 # 更新section_data
-                self.section_data[self.current_section_index] = updated_data
+                self.section_data[self.current_section_index] = data_dict
                 
                 # 更新列表框中的显示文本
                 if self.section_list.count() > self.current_section_index:
@@ -678,7 +681,7 @@ class BeamCalculationGUI(QMainWindow):
                         new_text = f"{self.current_section_index+1}-{sec_num}"
                         list_item.setText(new_text)
                 
-                print(f"已保存当前截面数据到section_data: {updated_data}")
+                print(f"已保存当前截面数据到section_data: {data_dict}")
                 
             except Exception as e:
                 print(f"保存当前参数到section_data失败: {e}")
@@ -698,57 +701,107 @@ class BeamCalculationGUI(QMainWindow):
             
             # 生成新的截面编号，序号自动加1
             new_idx = len(self.section_data)
-            new_sec_num = ""
+            new_sec_num = f"截面{new_idx+1}"
             
-            # 创建默认参数
-            default_data = {
-                "截面编号": new_sec_num,
-                "sec_num": new_sec_num,
-                "结构重要性系数γ0": 1.0,
-                "γ0": 1.0,
-                "gamma0": 1.0,
-                "结构重要性系数": 1.0,
-                "弯矩设计值M": 250,
-                "M": 250,
-                "弯矩设计值": 250,
-                "弯矩": 250,
-                "是否地震作用组合": 0,
-                "is_seismic": 0,
-                "是否地震": 0,
-                "地震作用组合": 0,
-                "截面类型": "矩形",
-                "sec_type": "矩形",
-                "b": 300,
-                "截面宽度": 300,
-                "h": 600,
-                "截面高度": 600,
-                "bf": 0,
-                "受压翼缘宽度": 0,
-                "hf": 0,
-                "受压翼缘厚度": 0,
-                "混凝土强度等级C": 30,
-                "fcuk": 30,
-                "混凝土强度等级": 30,
-                "受拉钢筋强度等级": "HRB400",
-                "fy_grade": "HRB400",
-                "钢筋强度等级": "HRB400",
-                "受压钢筋强度等级": "HRB400",
-                "fyc_grade": "HRB400",
-                "受拉钢筋面积As": 1500,
-                "ast": 1500,
-                "As": 1500,
-                "受拉钢筋面积": 1500,
-                "受拉钢筋as": 42.5,
-                "as_t": 42.5,
-                "as": 42.5,
-                "受压钢筋面积As": 0,
-                "asc": 0,
-                "As'": 0,
-                "受压钢筋面积": 0,
-                "受压钢筋as": 42.5,
-                "as_c": 42.5,
-                "as'": 42.5
-            }
+            # 如果已有数据，使用最后一行数据作为模板，确保所有列都存在
+            if self.section_data:
+                # 复制最后一行数据作为模板
+                default_data = self.section_data[-1].copy()
+                # 更新关键参数
+                default_data.update({
+                    "截面编号": new_sec_num,
+                    "sec_num": new_sec_num,
+                    "γ0": 1.0,
+                    "gamma0": 1.0,
+                    "结构重要性系数": 1.0,
+                    "M": 250,
+                    "弯矩设计值": 250,
+                    "弯矩": 250,
+                    "is_seismic": 0,
+                    "是否地震": 0,
+                    "地震作用组合": 0,
+                    "是否地震作用组合": 0,
+                    "sec_type": "矩形",
+                    "截面类型": "矩形",
+                    "b": 300,
+                    "截面宽度": 300,
+                    "h": 600,
+                    "截面高度": 600,
+                    "bf": 0,
+                    "受压翼缘宽度": 0,
+                    "hf": 0,
+                    "受压翼缘厚度": 0,
+                    "fcuk": 30,
+                    "混凝土强度等级": 30,
+                    "fy_grade": "HRB400",
+                    "受拉钢筋强度等级": "HRB400",
+                    "钢筋强度等级": "HRB400",
+                    "fyc_grade": "HRB400",
+                    "受压钢筋强度等级": "HRB400",
+                    "ast": 1500,
+                    "As": 1500,
+                    "受拉钢筋面积": 1500,
+                    "受拉钢筋面积As": 1500,
+                    "as_t": 42.5,
+                    "as": 42.5,
+                    "受拉钢筋as": 42.5,
+                    "asc": 0,
+                    "As'": 0,
+                    "受压钢筋面积": 0,
+                    "受压钢筋面积As": 0,
+                    "as_c": 42.5,
+                    "as'": 42.5,
+                    "受压钢筋as": 42.5,
+                    "受压钢筋as'": 42.5
+                })
+            else:
+                # 如果没有数据，使用默认参数
+                default_data = {
+                    "截面编号": new_sec_num,
+                    "sec_num": new_sec_num,
+                    "γ0": 1.0,
+                    "gamma0": 1.0,
+                    "结构重要性系数": 1.0,
+                    "M": 250,
+                    "弯矩设计值": 250,
+                    "弯矩": 250,
+                    "is_seismic": 0,
+                    "是否地震": 0,
+                    "地震作用组合": 0,
+                    "是否地震作用组合": 0,
+                    "sec_type": "矩形",
+                    "截面类型": "矩形",
+                    "b": 300,
+                    "截面宽度": 300,
+                    "h": 600,
+                    "截面高度": 600,
+                    "bf": 0,
+                    "受压翼缘宽度": 0,
+                    "hf": 0,
+                    "受压翼缘厚度": 0,
+                    "fcuk": 30,
+                    "混凝土强度等级": 30,
+                    "fy_grade": "HRB400",
+                    "受拉钢筋强度等级": "HRB400",
+                    "钢筋强度等级": "HRB400",
+                    "fyc_grade": "HRB400",
+                    "受压钢筋强度等级": "HRB400",
+                    "ast": 1500,
+                    "As": 1500,
+                    "受拉钢筋面积": 1500,
+                    "受拉钢筋面积As": 1500,
+                    "as_t": 42.5,
+                    "as": 42.5,
+                    "受拉钢筋as": 42.5,
+                    "asc": 0,
+                    "As'": 0,
+                    "受压钢筋面积": 0,
+                    "受压钢筋面积As": 0,
+                    "as_c": 42.5,
+                    "as'": 42.5,
+                    "受压钢筋as": 42.5,
+                    "受压钢筋as'": 42.5
+                }
             
             # 添加到section_data列表
             self.section_data.append(default_data)
@@ -770,7 +823,7 @@ class BeamCalculationGUI(QMainWindow):
             self.result_text.append(error_msg + "\n")
     
     def save_data_to_file(self):
-        """将数据修改保存到数据文件"""
+        """将数据修改保存到数据文件，只回写读取过的单元格"""
         try:
             # 先保存当前参数到section_data
             self.save_current_params_to_data()
@@ -780,61 +833,94 @@ class BeamCalculationGUI(QMainWindow):
             # 获取文件路径
             file_path = self.file_input.text()
             
-            # 读取原始文件，获取列名
+            # 读取原始文件，获取完整的数据和列名
             df_original = pd.read_excel(file_path)
             
-            # 创建一个新的DataFrame，使用原始文件的列名
-            df_new = pd.DataFrame(columns=df_original.columns)
+            # 创建一个新的DataFrame，使用原始文件的完整数据作为基础
+            df_new = df_original.copy()
             
-            # 填充所有数据
+            # 只更新读取过的数据行和列
             for idx, data in enumerate(self.section_data):
-                # 创建一个新行
-                new_row = {}
-                
-                # 遍历原始文件的所有列，填充对应的值
-                for col in df_original.columns:
-                    # 根据列名获取对应的数据
-                    if col == "截面编号":
-                        new_row[col] = data.get("截面编号", data.get("sec_num", ""))
-                    elif col == "结构重要性系数γ0":
-                        new_row[col] = data.get("γ0", data.get("gamma0", data.get("结构重要性系数", 1.0)))
-                    elif col == "弯矩设计值M":
-                        new_row[col] = data.get("M", data.get("弯矩设计值", data.get("弯矩", 250)))
-                    elif col == "是否地震作用组合":
-                        new_row[col] = data.get("is_seismic", data.get("是否地震", data.get("地震作用组合", data.get("是否地震作用组合", 0))))
-                    elif col == "截面类型":
-                        new_row[col] = data.get("sec_type", data.get("截面类型", "矩形"))
-                    elif col == "b":
-                        new_row[col] = data.get("b", data.get("截面宽度", 300))
-                    elif col == "h":
-                        new_row[col] = data.get("h", data.get("截面高度", 600))
-                    elif col == "bf":
-                        new_row[col] = data.get("bf", data.get("受压翼缘宽度", 0))
-                    elif col == "hf":
-                        new_row[col] = data.get("hf", data.get("受压翼缘厚度", 0))
-                    elif col == "混凝土强度等级C":
-                        new_row[col] = data.get("fcuk", data.get("混凝土强度等级", 30))
-                    elif col == "受拉钢筋强度等级":
-                        new_row[col] = data.get("fy_grade", data.get("受拉钢筋强度等级", data.get("钢筋强度等级", "HRB400")))
-                    elif col == "受压钢筋强度等级":
-                        new_row[col] = data.get("fyc_grade", data.get("受压钢筋强度等级", "HRB400"))
-                    elif col == "受拉钢筋面积As":
-                        new_row[col] = data.get("ast", data.get("As", data.get("受拉钢筋面积", data.get("受拉钢筋面积As", 1500))))
-                    elif col == "受拉钢筋as":
-                        new_row[col] = data.get("as_t", data.get("as", data.get("受拉钢筋as", 42.5)))
-                    elif col == "受压钢筋面积As":
-                        new_row[col] = data.get("asc", data.get("As'", data.get("受压钢筋面积", data.get("受压钢筋面积As", 0))))
-                    elif col == "受压钢筋as":
-                        new_row[col] = data.get("as_c", data.get("as'", data.get("受压钢筋as", data.get("受压钢筋as'", 42.5))))
-                    else:
-                        # 其他列（如计算结果列），根据情况处理
-                        if col in ["受压区高度x", "抗弯承载力Mu", "抗弯承载力MuE", "抗力效应比R/S"]:
-                            new_row[col] = data.get(col, 0)
+                # 确保索引不超出原始数据范围
+                if idx < len(df_new):
+                    # 只更新我们读取过的列
+                    for col in df_new.columns:
+                        # 根据列名获取对应的数据，只更新我们读取过的单元格
+                        if col == "截面编号":
+                            df_new.at[idx, col] = data.get("截面编号", data.get("sec_num", df_new.at[idx, col]))
+                        elif col == "结构重要性系数γ0":
+                            df_new.at[idx, col] = data.get("γ0", data.get("gamma0", data.get("结构重要性系数", df_new.at[idx, col])))
+                        elif col == "弯矩设计值M":
+                            df_new.at[idx, col] = data.get("M", data.get("弯矩设计值", data.get("弯矩", df_new.at[idx, col])))
+                        elif col == "是否地震作用组合":
+                            df_new.at[idx, col] = data.get("is_seismic", data.get("是否地震", data.get("地震作用组合", data.get("是否地震作用组合", df_new.at[idx, col]))))
+                        elif col == "截面类型":
+                            df_new.at[idx, col] = data.get("sec_type", data.get("截面类型", df_new.at[idx, col]))
+                        elif col == "b":
+                            df_new.at[idx, col] = data.get("b", data.get("截面宽度", df_new.at[idx, col]))
+                        elif col == "h":
+                            df_new.at[idx, col] = data.get("h", data.get("截面高度", df_new.at[idx, col]))
+                        elif col == "bf":
+                            df_new.at[idx, col] = data.get("bf", data.get("受压翼缘宽度", df_new.at[idx, col]))
+                        elif col == "hf":
+                            df_new.at[idx, col] = data.get("hf", data.get("受压翼缘厚度", df_new.at[idx, col]))
+                        elif col == "混凝土强度等级C":
+                            df_new.at[idx, col] = data.get("fcuk", data.get("混凝土强度等级", df_new.at[idx, col]))
+                        elif col == "受拉钢筋强度等级":
+                            df_new.at[idx, col] = data.get("fy_grade", data.get("受拉钢筋强度等级", data.get("钢筋强度等级", df_new.at[idx, col])))
+                        elif col == "受压钢筋强度等级":
+                            df_new.at[idx, col] = data.get("fyc_grade", data.get("受压钢筋强度等级", df_new.at[idx, col]))
+                        elif col == "受拉钢筋面积As":
+                            df_new.at[idx, col] = data.get("ast", data.get("As", data.get("受拉钢筋面积", data.get("受拉钢筋面积As", df_new.at[idx, col]))))
+                        elif col == "受拉钢筋as":
+                            df_new.at[idx, col] = data.get("as_t", data.get("as", data.get("受拉钢筋as", df_new.at[idx, col])))
+                        elif col == "受压钢筋面积As":
+                            df_new.at[idx, col] = data.get("asc", data.get("As'", data.get("受压钢筋面积", data.get("受压钢筋面积As", df_new.at[idx, col]))))
+                        elif col == "受压钢筋as":
+                            df_new.at[idx, col] = data.get("as_c", data.get("as'", data.get("受压钢筋as", data.get("受压钢筋as'", df_new.at[idx, col]))))
+                        # 对于其他列，保持原始值不变
+                else:
+                    # 新增行，使用完整的默认数据
+                    new_row = {}
+                    for col in df_new.columns:
+                        if col == "截面编号":
+                            new_row[col] = data.get("截面编号", data.get("sec_num", f"截面{idx+1}"))
+                        elif col == "结构重要性系数γ0":
+                            new_row[col] = data.get("γ0", data.get("gamma0", data.get("结构重要性系数", 1.0)))
+                        elif col == "弯矩设计值M":
+                            new_row[col] = data.get("M", data.get("弯矩设计值", data.get("弯矩", 250)))
+                        elif col == "是否地震作用组合":
+                            new_row[col] = data.get("is_seismic", data.get("是否地震", data.get("地震作用组合", data.get("是否地震作用组合", 0))))
+                        elif col == "截面类型":
+                            new_row[col] = data.get("sec_type", data.get("截面类型", "矩形"))
+                        elif col == "b":
+                            new_row[col] = data.get("b", data.get("截面宽度", 300))
+                        elif col == "h":
+                            new_row[col] = data.get("h", data.get("截面高度", 600))
+                        elif col == "bf":
+                            new_row[col] = data.get("bf", data.get("受压翼缘宽度", 0))
+                        elif col == "hf":
+                            new_row[col] = data.get("hf", data.get("受压翼缘厚度", 0))
+                        elif col == "混凝土强度等级C":
+                            new_row[col] = data.get("fcuk", data.get("混凝土强度等级", 30))
+                        elif col == "受拉钢筋强度等级":
+                            new_row[col] = data.get("fy_grade", data.get("受拉钢筋强度等级", data.get("钢筋强度等级", "HRB400")))
+                        elif col == "受压钢筋强度等级":
+                            new_row[col] = data.get("fyc_grade", data.get("受压钢筋强度等级", "HRB400"))
+                        elif col == "受拉钢筋面积As":
+                            new_row[col] = data.get("ast", data.get("As", data.get("受拉钢筋面积", data.get("受拉钢筋面积As", 1500))))
+                        elif col == "受拉钢筋as":
+                            new_row[col] = data.get("as_t", data.get("as", data.get("受拉钢筋as", 42.5)))
+                        elif col == "受压钢筋面积As":
+                            new_row[col] = data.get("asc", data.get("As'", data.get("受压钢筋面积", data.get("受压钢筋面积As", 0))))
+                        elif col == "受压钢筋as":
+                            new_row[col] = data.get("as_c", data.get("as'", data.get("受压钢筋as", data.get("受压钢筋as'", 42.5))))
                         else:
+                            # 对于其他列，使用默认值或空值
                             new_row[col] = data.get(col, "")
-                
-                # 将新行添加到DataFrame
-                df_new.loc[idx] = new_row
+                    
+                    # 添加新行到DataFrame
+                    df_new.loc[idx] = new_row
             
             # 直接保存到原文件
             df_new.to_excel(file_path, index=False)
