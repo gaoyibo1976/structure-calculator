@@ -26,8 +26,8 @@ class BeamCalculationGUI:
         # 将复选框样式设置为对勾
         self.style.configure("TCheckbutton", indicatoron=True)
         
-        # 当前工作目录和数据文件
-        self.current_dir = os.getcwd()
+        # 当前工作目录和数据文件，默认使用input文件夹
+        self.current_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), "input")
         self.data_file = "梁抗弯承载力数据文件.xlsx"
         
         # 结果窗口
@@ -60,17 +60,17 @@ class BeamCalculationGUI:
         self.main_frame.rowconfigure(1, weight=0)
         self.main_frame.rowconfigure(2, weight=0)
         
-        # 初始化各个区域
-        self.init_left_frame()
-        self.init_right_frame()
-        self.init_option_frame()
-        self.init_btn_frame()
-        
         # 初始化状态栏
         self.status_var = tk.StringVar()
         self.status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
         self.status_var.set("就绪")
+        
+        # 初始化各个区域
+        self.init_left_frame()
+        self.init_right_frame()
+        self.init_option_frame()
+        self.init_btn_frame()
         
         # 初始化结果窗口
         self.init_result_window()
@@ -84,7 +84,7 @@ class BeamCalculationGUI:
             ("梁高h", "mm", "h", 400),
             ("受压翼缘宽度bf'", "mm", "bf", 1200),
             ("受压翼缘厚度hf'", "mm", "hf", 100),
-            ("混凝土强度等级", "C", "fcuk", 30),
+            ("混凝土强度等级C", "", "fcuk", 30),  # 将C移到参数名称中
             ("受拉钢筋强度等级", ["HPB300", "HRB335", "HRB400", "HRB500", "HRBF335", "HRBF400", "HRBF500"], "fy_grade", "HRB400"),
             ("受压钢筋强度等级", ["HPB300", "HRB335", "HRB400", "HRB500", "HRBF335", "HRBF400", "HRBF500"], "fyc_grade", "HRB400"),
             ("受拉钢筋面积As", "mm²", "Ast", 1500),
@@ -103,17 +103,17 @@ class BeamCalculationGUI:
             row = i
             col = 0
             
-            label = ttk.Label(self.left_frame, text=f"{param[0]}:")
+            label = ttk.Label(self.left_frame, text=f"{param[0]}:", width=15)
             label.grid(row=row, column=col, sticky=tk.E, padx=5, pady=5)
             col += 1
             
             if len(param) == 4:
                 # 下拉菜单或带单位的输入框
                 if isinstance(param[1], list):
-                    # 下拉菜单
+                    # 下拉菜单 - 宽度与文本框一致
                     var = tk.StringVar(value=param[3])
-                    combo = ttk.Combobox(self.left_frame, textvariable=var, values=param[1], state="readonly", width=15)
-                    combo.grid(row=row, column=col, sticky=tk.W, padx=5, pady=5)
+                    combo = ttk.Combobox(self.left_frame, textvariable=var, values=param[1], state="readonly", width=10)
+                    combo.grid(row=row, column=col, sticky=tk.W, padx=0, pady=5)  # 减少左侧间距
                     
                     # 绑定焦点事件，显示提示
                     combo.bind("<FocusIn>", lambda e, p=param: self.show_param_hint(p))
@@ -128,7 +128,7 @@ class BeamCalculationGUI:
                     # 如果有单位，显示单位
                     if isinstance(param[1], list) and len(param[1]) > 0 and not isinstance(param[1][0], str):
                         unit_label = ttk.Label(self.left_frame, text=param[1])
-                        unit_label.grid(row=row, column=col, sticky=tk.W, padx=5, pady=5)
+                        unit_label.grid(row=row, column=col, sticky=tk.W, padx=2, pady=5)  # 减少左侧间距
                 else:
                     # 带单位的输入框
                     unit = param[1]
@@ -137,7 +137,7 @@ class BeamCalculationGUI:
                     # 创建输入框
                     var = tk.StringVar(value=str(default_val))
                     entry = ttk.Entry(self.left_frame, textvariable=var, width=10)
-                    entry.grid(row=row, column=col, sticky=tk.W, padx=5, pady=5)
+                    entry.grid(row=row, column=col, sticky=tk.W, padx=0, pady=5)  # 减少左侧间距
                     
                     # 绑定焦点事件，显示提示
                     entry.bind("<FocusIn>", lambda e, p=param: self.show_param_hint(p))
@@ -145,9 +145,9 @@ class BeamCalculationGUI:
                     
                     col += 1
                     
-                    # 显示单位
+                    # 显示单位，靠近输入框
                     unit_label = ttk.Label(self.left_frame, text=unit)
-                    unit_label.grid(row=row, column=col, sticky=tk.W, padx=5, pady=5)
+                    unit_label.grid(row=row, column=col, sticky=tk.W, padx=2, pady=5)  # 减少左侧间距
             
             self.param_vars[param[-1]] = var
         
@@ -155,6 +155,9 @@ class BeamCalculationGUI:
         # 确保param_vars中已经有sec_type键后再调用
         if 'sec_type' in self.param_vars:
             self.on_section_type_change(None)
+        
+        # 尝试加载数据文件的第一行数据到参数区
+        self.load_default_data()
     
     def init_right_frame(self):
         """初始化右侧数据文件和列表区"""
@@ -164,7 +167,7 @@ class BeamCalculationGUI:
         
         ttk.Label(file_frame, text="数据文件：").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
         self.file_var = tk.StringVar(value=self.data_file)
-        self.file_entry = ttk.Entry(file_frame, textvariable=self.file_var, width=30)
+        self.file_entry = ttk.Entry(file_frame, textvariable=self.file_var, width=25)
         self.file_entry.grid(row=0, column=1, sticky=tk.W+tk.E, padx=5, pady=5)
         
         ttk.Button(file_frame, text="选择文件", command=self.select_file).grid(row=0, column=2, padx=5, pady=5)
@@ -178,13 +181,14 @@ class BeamCalculationGUI:
         dir_entry = ttk.Entry(dir_frame, textvariable=self.dir_var, state="readonly")
         dir_entry.grid(row=0, column=1, sticky=tk.W+tk.E, padx=5, pady=5)
         
-        # 截面列表框
+        # 截面列表框 - 调整宽度为更紧凑的尺寸
         list_frame = ttk.Frame(self.right_frame)
         list_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         ttk.Label(list_frame, text="截面列表：").pack(anchor=tk.W, padx=5, pady=5)
         
-        self.section_list = tk.Listbox(list_frame, height=15, width=50)
+        # 减小列表框宽度，只显示序号和编号
+        self.section_list = tk.Listbox(list_frame, height=15, width=35)
         self.section_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.section_list.yview)
@@ -193,6 +197,58 @@ class BeamCalculationGUI:
         
         # 绑定列表框选择事件
         self.section_list.bind("<<ListboxSelect>>", self.on_section_select)
+    
+    def load_default_data(self):
+        """加载数据文件的第一行数据到参数区"""
+        try:
+            file_path = os.path.join(self.current_dir, self.data_file)
+            if os.path.exists(file_path):
+                df = pd.read_excel(file_path, engine="openpyxl")
+                if not df.empty:
+                    row = df.iloc[0]
+                    # 更新参数区的参数，确保键存在
+                    if 'sec_type' in self.param_vars:
+                        self.param_vars["sec_type"].set(row.get("截面类型", "矩形"))
+                    if 'b' in self.param_vars:
+                        self.param_vars["b"].set(str(row.get("b", 200)))
+                    if 'h' in self.param_vars:
+                        self.param_vars["h"].set(str(row.get("h", 400)))
+                    if 'bf' in self.param_vars:
+                        self.param_vars["bf"].set(str(row.get("bf", 1200)))
+                    if 'hf' in self.param_vars:
+                        self.param_vars["hf"].set(str(row.get("hf", 100)))
+                    if 'fcuk' in self.param_vars:
+                        self.param_vars["fcuk"].set(str(row.get("混凝土强度等级C", 30)))
+                    if 'fy_grade' in self.param_vars:
+                        self.param_vars["fy_grade"].set(row.get("受拉钢筋强度等级", "HRB400"))
+                    if 'fyc_grade' in self.param_vars:
+                        self.param_vars["fyc_grade"].set(row.get("受压钢筋强度等级", "HRB400"))
+                    if 'Ast' in self.param_vars:
+                        self.param_vars["Ast"].set(str(row.get("受拉钢筋面积As", 1500)))
+                    if 'ast' in self.param_vars:
+                        self.param_vars["ast"].set(str(row.get("受拉钢筋as", 35)))
+                    if 'Asc' in self.param_vars:
+                        self.param_vars["Asc"].set(str(row.get("受压钢筋面积As", 0)))
+                    if 'asc' in self.param_vars:
+                        self.param_vars["asc"].set(str(row.get("受压钢筋as", 35)))
+                    if 'M' in self.param_vars:
+                        self.param_vars["M"].set(str(row.get("弯矩设计值M", 250)))
+                    if 'is_seismic' in self.param_vars:
+                        self.param_vars["is_seismic"].set("是" if row.get("是否地震作用组合", 0) == 1 else "否")
+                    if 'gamma0' in self.param_vars:
+                        self.param_vars["gamma0"].set(str(row.get("结构重要性系数γ0", 1.0)))
+                    
+                    # 保存数据以便后续使用
+                    self.df = df
+                    
+                    # 刷新截面列表
+                    self.refresh_section_list()
+                    
+                    self.status_var.set("已加载默认截面数据")
+        except Exception as e:
+            self.status_var.set(f"加载默认数据失败：{str(e)}")
+            # 这是初始化过程，不显示错误对话框
+            pass
     
     def init_option_frame(self):
         """初始化右侧计算选项区"""
@@ -367,6 +423,17 @@ class BeamCalculationGUI:
     def calculate_single(self):
         """单个截面计算"""
         try:
+            # 检查param_vars字典是否包含所需的所有键
+            required_keys = ["sec_type", "b", "h", "bf", "hf", "fcuk", "fy_grade", "fyc_grade", 
+                           "Ast", "ast", "Asc", "asc", "M", "is_seismic", "gamma0"]
+            
+            # 确保所有必需的键都存在
+            for key in required_keys:
+                if key not in self.param_vars:
+                    messagebox.showerror("错误", f"参数缺失：{key}")
+                    self.status_var.set(f"参数缺失：{key}")
+                    return
+            
             # 获取参数
             sec_type = self.param_vars["sec_type"].get()
             b = float(self.param_vars["b"].get())
@@ -431,15 +498,24 @@ class BeamCalculationGUI:
         except ValueError as e:
             messagebox.showerror("错误", f"参数输入错误：{str(e)}")
             self.status_var.set("参数输入错误")
+        except KeyError as e:
+            messagebox.showerror("错误", f"参数键缺失：{str(e)}")
+            self.status_var.set(f"参数键缺失：{str(e)}")
         except Exception as e:
             messagebox.showerror("错误", f"计算失败：{str(e)}")
-            self.status_var.set("计算失败")
+            self.status_var.set(f"计算失败：{str(e)}")
     
     def calculate_batch(self):
         """批量计算"""
         try:
             # 获取数据文件路径
             file_path = os.path.join(self.current_dir, self.data_file)
+            
+            # 检查文件是否存在
+            if not os.path.exists(file_path):
+                messagebox.showerror("错误", f"数据文件不存在：{file_path}")
+                self.status_var.set(f"数据文件不存在：{file_path}")
+                return
             
             # 读取数据文件
             df = pd.read_excel(file_path, engine="openpyxl")
@@ -477,7 +553,8 @@ class BeamCalculationGUI:
                 # 更新状态
                 self.status_var.set(f"正在计算截面{idx+1}/{total_count}")
                 self.root.update()
-                self.result_window.update()
+                if self.result_window:
+                    self.result_window.update()
             
             # 显示所有报告
             for report in all_reports:
@@ -489,7 +566,8 @@ class BeamCalculationGUI:
                 
                 self.result_text.insert(tk.END, f"\n正在生成Excel结果文件...\n")
                 self.root.update()
-                self.result_window.update()
+                if self.result_window:
+                    self.result_window.update()
                 
                 # 导入实际的Excel保存函数
                 from concrete.core.beam_utils import save_excel_result_with_style
@@ -507,9 +585,15 @@ class BeamCalculationGUI:
             self.result_text.insert(tk.END, summary)
             
             self.status_var.set(f"批量计算完成，共{total_count}个截面，{error_count}个失败")
+        except FileNotFoundError as e:
+            messagebox.showerror("错误", f"文件不存在：{str(e)}")
+            self.status_var.set(f"文件不存在：{str(e)}")
+        except PermissionError as e:
+            messagebox.showerror("错误", f"权限不足：{str(e)}")
+            self.status_var.set(f"权限不足：{str(e)}")
         except Exception as e:
             messagebox.showerror("错误", f"批量计算失败：{str(e)}")
-            self.status_var.set("批量计算失败")
+            self.status_var.set(f"批量计算失败：{str(e)}")
     
     def modify_and_save(self):
         """修改并保存截面数据"""
