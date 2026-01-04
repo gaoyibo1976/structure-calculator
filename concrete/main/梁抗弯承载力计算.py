@@ -39,7 +39,7 @@ def calculate_single_item(item, index, total_count):
     sec_num = item["sec_num"] if not pd.isna(item["sec_num"]) else ""
     gamma_0 = item["γ0"]
     M = item["M"]  # 弯矩设计值
-    sec_num_display = f"序号：{total_count}.{index + 1}      编号：{sec_num}      截面类型：{item['sec_type']}"
+    sec_num_display = f"序号：{index + 1}      编号：{sec_num}      截面类型：{item['sec_type']}"
     calc_p = item["calc_params"]
 
     try:

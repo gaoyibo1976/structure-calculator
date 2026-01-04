@@ -80,6 +80,9 @@ class BeamCalculationGUI(QMainWindow):
         # 安装事件过滤器
         self.installEventFilters()
         
+        # 为参数输入框添加回车键响应
+        self.setup_enter_key_response()
+        
         # 状态栏创建完成后，再加载数据文件
         self.load_initial_data_file()
     
@@ -88,6 +91,7 @@ class BeamCalculationGUI(QMainWindow):
         # 存储控件和对应的提示信息
         self.tooltip_dict = {
             # 左侧参数面板
+            self.sec_num_input: "截面编号，用于标识不同截面",
             self.sec_type_combo: "选择截面类型（矩形或T形）",
             self.b_input: "截面宽度，单位：mm",
             self.h_input: "截面高度，单位：mm",
@@ -110,6 +114,8 @@ class BeamCalculationGUI(QMainWindow):
             self.output_result_var: "勾选后将生成结果文件",
             self.section_list: "显示数据文件中的截面列表",
             self.result_text: "计算结果输出区域",
+            self.save_data_button: "将数据修改保存到数据文件",
+            self.add_data_button: "新增截面数据",
             
             # 按钮
             self.calc_button: "进行单个截面抗弯承载力计算",
@@ -127,7 +133,7 @@ class BeamCalculationGUI(QMainWindow):
             widget.setMouseTracking(True)
     
     def eventFilter(self, obj, event):
-        """事件过滤器，处理鼠标悬停事件"""
+        """事件过滤器，处理鼠标悬停事件和回车键响应"""
         if event.type() == QEvent.Enter:
             # 鼠标进入控件，显示提示信息
             if obj in self.tooltip_dict:
@@ -135,7 +141,40 @@ class BeamCalculationGUI(QMainWindow):
         elif event.type() == QEvent.Leave:
             # 鼠标离开控件，恢复默认状态
             self.status_bar.showMessage("就绪")
+        elif event.type() == QEvent.KeyPress and event.key() == Qt.Key_Return:
+            # 回车键响应，执行单截面计算
+            self.calculate_single()
         return super().eventFilter(obj, event)
+    
+    def setup_enter_key_response(self):
+        """为参数输入框添加回车键响应，执行单截面计算"""
+        # 获取所有参数输入控件
+        param_widgets = [
+            self.sec_num_input,
+            self.sec_type_combo,
+            self.b_input,
+            self.h_input,
+            self.bf_input,
+            self.hf_input,
+            self.fcuk_input,
+            self.fy_combo,
+            self.fyc_combo,
+            self.ast_input,
+            self.as_t_input,
+            self.asc_input,
+            self.as_c_input,
+            self.m_input,
+            self.seismic_combo,
+            self.gamma0_input
+        ]
+        
+        # 为每个控件添加回车键响应
+        for widget in param_widgets:
+            # 只为QLineEdit对象连接returnPressed信号
+            if hasattr(widget, 'returnPressed'):
+                widget.returnPressed.connect(self.calculate_single)  # 文本框的回车键
+            # 为所有控件设置焦点策略，确保能接收焦点，通过事件过滤器处理回车键
+            widget.setFocusPolicy(Qt.StrongFocus)  # 确保控件能接收焦点
     
     def create_left_panel(self, parent_layout):
         """创建左侧参数面板"""
@@ -144,6 +183,15 @@ class BeamCalculationGUI(QMainWindow):
         
         # 设置左侧面板的固定宽度，窗口最大化时保持不变
         left_group.setFixedWidth(300)
+        
+        # 截面编号
+        sec_num_layout = QHBoxLayout()
+        sec_num_label = QLabel("截面编号:")
+        self.sec_num_input = QLineEdit("")
+        self.sec_num_input.setFixedWidth(150)
+        sec_num_layout.addWidget(sec_num_label)
+        sec_num_layout.addWidget(self.sec_num_input)
+        left_layout.addLayout(sec_num_layout)
         
         # 截面类型
         sec_type_layout = QHBoxLayout()
@@ -337,6 +385,22 @@ class BeamCalculationGUI(QMainWindow):
         self.result_file_input = QLineEdit("抗弯承载力计算结果")
         result_file_layout.addWidget(result_file_label)
         result_file_layout.addWidget(self.result_file_input)
+        
+        # 添加.xlsx及.out的文字提示
+        file_ext_label = QLabel(".xlsx及.out")
+        result_file_layout.addWidget(file_ext_label)
+        
+        # 添加将数据修改保存到数据文件按钮
+        self.save_data_button = QPushButton("保存数据到文件")
+        self.save_data_button.setFixedWidth(120)
+        self.save_data_button.clicked.connect(self.save_data_to_file)
+        result_file_layout.addWidget(self.save_data_button)
+        
+        # 添加新增数据按钮
+        self.add_data_button = QPushButton("新增数据")
+        self.add_data_button.setFixedWidth(80)
+        self.add_data_button.clicked.connect(self.add_new_data)
+        result_file_layout.addWidget(self.add_data_button)
         right_layout.addLayout(result_file_layout)
         
         # 输出结果文件复选框
@@ -445,6 +509,10 @@ class BeamCalculationGUI(QMainWindow):
             return
         
         try:
+            # 保存当前截面的数据（如果有选中的截面）
+            if self.current_section_index >= 0:
+                self.save_current_params_to_data()
+            
             # 获取点击的列表项索引
             index = self.section_list.row(item)
             if 0 <= index < len(self.section_data):
@@ -472,6 +540,10 @@ class BeamCalculationGUI(QMainWindow):
         """根据数据更新参数面板"""
         # 调试信息：打印数据内容，查看实际字段名
         print(f"更新参数面板，数据: {data}")
+        
+        # 更新截面编号
+        sec_num = data.get("截面编号", data.get("sec_num", ""))
+        self.sec_num_input.setText(str(sec_num))
         
         # 更新截面类型
         # 尝试多种可能的字段名
@@ -520,10 +592,313 @@ class BeamCalculationGUI(QMainWindow):
         
         # 确保所有控件都更新完成
         self.status_bar.showMessage(f"已更新截面参数: {data.get('sec_num', '未知')}")    
+    
+    def save_current_params_to_data(self):
+        """将当前参数面板的数据保存到section_data中"""
+        if self.current_section_index >= 0 and self.current_section_index < len(self.section_data):
+            try:
+                # 获取当前参数面板的数据
+                sec_num = self.sec_num_input.text().strip()
+                sec_type = self.sec_type_combo.currentText()
+                b = float(self.b_input.text())
+                h = float(self.h_input.text())
+                bf = float(self.bf_input.text())
+                hf = float(self.hf_input.text())
+                fcuk = float(self.fcuk_input.text())
+                fy_grade = self.fy_combo.currentText()
+                fyc_grade = self.fyc_combo.currentText()
+                ast = float(self.ast_input.text())
+                as_t = float(self.as_t_input.text())
+                asc = float(self.asc_input.text())
+                as_c = float(self.as_c_input.text())
+                M = float(self.m_input.text())
+                is_seismic = 1 if self.seismic_combo.currentText() == "是" else 0
+                gamma0 = float(self.gamma0_input.text())
+                
+                # 如果截面编号为空，使用默认值
+                if not sec_num:
+                    sec_num = f"截面{self.current_section_index+1}"
+                
+                # 更新数据字典
+                updated_data = {
+                    "截面编号": sec_num,
+                    "sec_num": sec_num,
+                    "γ0": gamma0,
+                    "gamma0": gamma0,
+                    "结构重要性系数": gamma0,
+                    "M": M,
+                    "弯矩设计值": M,
+                    "弯矩": M,
+                    "is_seismic": is_seismic,
+                    "是否地震": is_seismic,
+                    "地震作用组合": is_seismic,
+                    "是否地震作用组合": is_seismic,
+                    "sec_type": sec_type,
+                    "截面类型": sec_type,
+                    "b": b,
+                    "截面宽度": b,
+                    "h": h,
+                    "截面高度": h,
+                    "bf": bf,
+                    "受压翼缘宽度": bf,
+                    "hf": hf,
+                    "受压翼缘厚度": hf,
+                    "fcuk": fcuk,
+                    "混凝土强度等级": fcuk,
+                    "fy_grade": fy_grade,
+                    "受拉钢筋强度等级": fy_grade,
+                    "钢筋强度等级": fy_grade,
+                    "fyc_grade": fyc_grade,
+                    "受压钢筋强度等级": fyc_grade,
+                    "ast": ast,
+                    "As": ast,
+                    "受拉钢筋面积": ast,
+                    "受拉钢筋面积As": ast,
+                    "as_t": as_t,
+                    "as": as_t,
+                    "受拉钢筋as": as_t,
+                    "asc": asc,
+                    "As'": asc,
+                    "受压钢筋面积": asc,
+                    "受压钢筋面积As": asc,
+                    "as_c": as_c,
+                    "as'": as_c,
+                    "受压钢筋as": as_c,
+                    "受压钢筋as'": as_c
+                }
+                
+                # 更新section_data
+                self.section_data[self.current_section_index] = updated_data
+                
+                print(f"已保存当前截面数据到section_data: {updated_data}")
+                
+            except Exception as e:
+                print(f"保存当前参数到section_data失败: {e}")
+    
     def load_initial_data_file(self):
         """加载初始数据文件"""
         # 初始加载默认数据文件到列表框
         self.load_data_file_to_list(self.default_data_file)
+        
+    def add_new_data(self):
+        """新增数据，自动增加一个列表，并赋予默认参数"""
+        try:
+            # 先保存当前参数到section_data
+            self.save_current_params_to_data()
+            
+            self.status_bar.showMessage("正在新增数据...")
+            
+            # 生成新的截面编号，序号自动加1
+            new_idx = len(self.section_data)
+            new_sec_num = ""
+            
+            # 创建默认参数
+            default_data = {
+                "截面编号": new_sec_num,
+                "sec_num": new_sec_num,
+                "结构重要性系数γ0": 1.0,
+                "γ0": 1.0,
+                "gamma0": 1.0,
+                "结构重要性系数": 1.0,
+                "弯矩设计值M": 250,
+                "M": 250,
+                "弯矩设计值": 250,
+                "弯矩": 250,
+                "是否地震作用组合": 0,
+                "is_seismic": 0,
+                "是否地震": 0,
+                "地震作用组合": 0,
+                "截面类型": "矩形",
+                "sec_type": "矩形",
+                "b": 300,
+                "截面宽度": 300,
+                "h": 600,
+                "截面高度": 600,
+                "bf": 0,
+                "受压翼缘宽度": 0,
+                "hf": 0,
+                "受压翼缘厚度": 0,
+                "混凝土强度等级C": 30,
+                "fcuk": 30,
+                "混凝土强度等级": 30,
+                "受拉钢筋强度等级": "HRB400",
+                "fy_grade": "HRB400",
+                "钢筋强度等级": "HRB400",
+                "受压钢筋强度等级": "HRB400",
+                "fyc_grade": "HRB400",
+                "受拉钢筋面积As": 1500,
+                "ast": 1500,
+                "As": 1500,
+                "受拉钢筋面积": 1500,
+                "受拉钢筋as": 42.5,
+                "as_t": 42.5,
+                "as": 42.5,
+                "受压钢筋面积As": 0,
+                "asc": 0,
+                "As'": 0,
+                "受压钢筋面积": 0,
+                "受压钢筋as": 42.5,
+                "as_c": 42.5,
+                "as'": 42.5
+            }
+            
+            # 添加到section_data列表
+            self.section_data.append(default_data)
+            
+            # 更新截面列表
+            list_text = f"{new_idx+1}-{new_sec_num}"
+            self.section_list.addItem(list_text)
+            
+            # 自动选择新添加的数据
+            self.section_list.setCurrentRow(new_idx)
+            self.on_list_item_clicked(self.section_list.item(new_idx))
+            
+            self.status_bar.showMessage(f"已成功新增数据，序号: {new_idx+1}")
+            self.result_text.append(f"已成功新增数据，序号: {new_idx+1}\n")
+            
+        except Exception as e:
+            error_msg = f"新增数据失败: {str(e)}"
+            self.status_bar.showMessage(error_msg)
+            self.result_text.append(error_msg + "\n")
+    
+    def save_data_to_file(self):
+        """将数据修改保存到数据文件，保留原文件样式"""
+        try:
+            # 先保存当前参数到section_data
+            self.save_current_params_to_data()
+            
+            self.status_bar.showMessage("正在保存数据到文件...")
+            
+            # 1. 将所有数据保存到临时Excel文件
+            file_path = self.file_input.text()
+            
+            # 读取原始文件，获取列名
+            df_original = pd.read_excel(file_path)
+            
+            # 创建一个新的DataFrame，使用原始文件的列名
+            df_new = pd.DataFrame(columns=df_original.columns)
+            
+            # 填充所有数据
+            for idx, data in enumerate(self.section_data):
+                # 创建一个新行
+                new_row = {}
+                
+                # 遍历原始文件的所有列，填充对应的值
+                for col in df_original.columns:
+                    # 根据列名获取对应的数据
+                    if col == "截面编号":
+                        new_row[col] = data.get("截面编号", data.get("sec_num", ""))
+                    elif col == "结构重要性系数γ0":
+                        new_row[col] = data.get("γ0", data.get("gamma0", data.get("结构重要性系数", 1.0)))
+                    elif col == "弯矩设计值M":
+                        new_row[col] = data.get("M", data.get("弯矩设计值", data.get("弯矩", 250)))
+                    elif col == "是否地震作用组合":
+                        new_row[col] = data.get("is_seismic", data.get("是否地震", data.get("地震作用组合", data.get("是否地震作用组合", 0))))
+                    elif col == "截面类型":
+                        new_row[col] = data.get("sec_type", data.get("截面类型", "矩形"))
+                    elif col == "b":
+                        new_row[col] = data.get("b", data.get("截面宽度", 300))
+                    elif col == "h":
+                        new_row[col] = data.get("h", data.get("截面高度", 600))
+                    elif col == "bf":
+                        new_row[col] = data.get("bf", data.get("受压翼缘宽度", 0))
+                    elif col == "hf":
+                        new_row[col] = data.get("hf", data.get("受压翼缘厚度", 0))
+                    elif col == "混凝土强度等级C":
+                        new_row[col] = data.get("fcuk", data.get("混凝土强度等级", 30))
+                    elif col == "受拉钢筋强度等级":
+                        new_row[col] = data.get("fy_grade", data.get("受拉钢筋强度等级", data.get("钢筋强度等级", "HRB400")))
+                    elif col == "受压钢筋强度等级":
+                        new_row[col] = data.get("fyc_grade", data.get("受压钢筋强度等级", "HRB400"))
+                    elif col == "受拉钢筋面积As":
+                        new_row[col] = data.get("ast", data.get("As", data.get("受拉钢筋面积", data.get("受拉钢筋面积As", 1500))))
+                    elif col == "受拉钢筋as":
+                        new_row[col] = data.get("as_t", data.get("as", data.get("受拉钢筋as", 42.5)))
+                    elif col == "受压钢筋面积As":
+                        new_row[col] = data.get("asc", data.get("As'", data.get("受压钢筋面积", data.get("受压钢筋面积As", 0))))
+                    elif col == "受压钢筋as":
+                        new_row[col] = data.get("as_c", data.get("as'", data.get("受压钢筋as", data.get("受压钢筋as'", 42.5))))
+                    else:
+                        # 其他列（如计算结果列），根据情况处理
+                        if col in ["受压区高度x", "抗弯承载力Mu", "抗弯承载力MuE", "抗力效应比R/S"]:
+                            new_row[col] = data.get(col, 0)
+                        else:
+                            new_row[col] = data.get(col, "")
+                
+                # 将新行添加到DataFrame
+                df_new.loc[idx] = new_row
+            
+            # 保存到临时文件
+            temp_file = file_path + ".temp.xlsx"
+            df_new.to_excel(temp_file, index=False)
+            
+            # 2. 使用openpyxl复制数据，保留原文件样式
+            from openpyxl import load_workbook
+            
+            # 加载原始文件和临时文件
+            wb_original = load_workbook(file_path)
+            ws_original = wb_original.active
+            
+            wb_temp = load_workbook(temp_file)
+            ws_temp = wb_temp.active
+            
+            # 获取原始文件的最大行列数
+            original_max_row = ws_original.max_row
+            original_max_col = ws_original.max_column
+            
+            # 获取临时文件的最大行列数
+            temp_max_row = ws_temp.max_row
+            temp_max_col = ws_temp.max_column
+            
+            # 3. 复制数据，保留原文件样式
+            # 遍历所有行和列，复制数据
+            for row in range(1, temp_max_row + 1):
+                for col in range(1, temp_max_col + 1):
+                    # 获取临时文件中的值
+                    cell_value = ws_temp.cell(row=row, column=col).value
+                    
+                    if row <= original_max_row and col <= original_max_col:
+                        # 原文件中已存在的单元格，直接更新值，保留样式
+                        ws_original.cell(row=row, column=col).value = cell_value
+                    else:
+                        # 原文件中不存在的单元格（新增行或列）
+                        # 对于新增行，复制上一行的样式
+                        if row > original_max_row:
+                            # 复制上一行的样式
+                            for c in range(1, original_max_col + 1):
+                                # 获取上一行的样式
+                                source_cell = ws_original.cell(row=original_max_row, column=c)
+                                new_cell = ws_original.cell(row=row, column=c)
+                                
+                                # 复制样式
+                                new_cell.font = source_cell.font
+                                new_cell.border = source_cell.border
+                                new_cell.fill = source_cell.fill
+                                new_cell.alignment = source_cell.alignment
+                                new_cell.number_format = source_cell.number_format
+                                new_cell.protection = source_cell.protection
+                                
+                                # 设置值
+                                if c <= temp_max_col:
+                                    new_cell.value = ws_temp.cell(row=row, column=c).value
+                        
+                        # 对于新增列，暂时不处理，使用默认样式
+                        if col > original_max_col:
+                            ws_original.cell(row=row, column=col).value = cell_value
+            
+            # 4. 保存原始文件
+            wb_original.save(file_path)
+            
+            # 5. 删除临时文件
+            os.remove(temp_file)
+            
+            self.status_bar.showMessage(f"数据已成功保存到文件: {os.path.basename(file_path)}")
+            self.result_text.append(f"数据已成功保存到文件: {file_path}\n")
+            
+        except Exception as e:
+            error_msg = f"保存数据到文件失败: {str(e)}"
+            self.status_bar.showMessage(error_msg)
+            self.result_text.append(error_msg + "\n")
     
     def create_button_panel(self, parent_layout):
         """创建底部按钮面板"""
