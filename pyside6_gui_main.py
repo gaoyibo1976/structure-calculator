@@ -142,7 +142,8 @@ class BeamCalculationGUI(QMainWindow):
             # 鼠标离开控件，恢复默认状态
             self.status_bar.showMessage("就绪")
         elif event.type() == QEvent.KeyPress and event.key() == Qt.Key_Return:
-            # 回车键响应，执行单截面计算
+            # 回车键响应：先保存参数，更新列表，再执行计算
+            self.save_current_params_to_data()
             self.calculate_single()
         return super().eventFilter(obj, event)
     
@@ -172,9 +173,17 @@ class BeamCalculationGUI(QMainWindow):
         for widget in param_widgets:
             # 只为QLineEdit对象连接returnPressed信号
             if hasattr(widget, 'returnPressed'):
-                widget.returnPressed.connect(self.calculate_single)  # 文本框的回车键
+                # 回车键响应：先保存参数，更新列表，再执行计算
+                widget.returnPressed.connect(self.on_enter_key_pressed)  # 文本框的回车键
             # 为所有控件设置焦点策略，确保能接收焦点，通过事件过滤器处理回车键
             widget.setFocusPolicy(Qt.StrongFocus)  # 确保控件能接收焦点
+    
+    def on_enter_key_pressed(self):
+        """回车键按下时的处理：保存参数、更新列表、执行计算"""
+        # 保存当前参数到section_data
+        self.save_current_params_to_data()
+        # 执行单截面计算
+        self.calculate_single()
     
     def create_left_panel(self, parent_layout):
         """创建左侧参数面板"""
