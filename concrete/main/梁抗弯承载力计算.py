@@ -54,7 +54,8 @@ def calculate_single_item(item, index, total_count):
             rs_ratio = (MuE / M if is_seismic == 1 else Mu / M) if M > 0 else 0
             # 创建包含M和rs_ratio的扩展结果
             extended_result = result + (M, rs_ratio)
-            report = report_beam_rect_fc(sec_num_display, rect_calc_p, extended_result)
+            # 将is_seismic参数传递给报告生成函数
+            report = report_beam_rect_fc(sec_num_display, rect_calc_p, extended_result, is_seismic)
             return x, Mu, M, rs_ratio, report, None
 
         elif item["sec_type"] == "T形":
@@ -67,7 +68,8 @@ def calculate_single_item(item, index, total_count):
             rs_ratio = (MuE / M if is_seismic == 1 else Mu / M) if M > 0 else 0
             # 创建包含M和rs_ratio的扩展结果
             extended_result = result + (M, rs_ratio)
-            report = report_beam_t_fc(sec_num_display, calc_p, extended_result)
+            # 将is_seismic参数传递给报告生成函数
+            report = report_beam_t_fc(sec_num_display, calc_p, extended_result, is_seismic)
             return x, Mu, M, rs_ratio, report, None
 
         else:

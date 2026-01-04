@@ -77,7 +77,7 @@ class BeamReportBase:
 """
 
 class RectBeamReport(BeamReportBase):
-    def __init__(self, num, param, result):
+    def __init__(self, num, param, result, is_seismic=0):
         self.b, self.h, self.fcuk, self.fy_grade, self.fyc_grade, \
         self.Ast, self.ast, self.Asc, self.asc, self.γ0 = param
         
@@ -89,6 +89,9 @@ class RectBeamReport(BeamReportBase):
             self.x, self.xb, self.ξ, self.ξb_val, self.Mu, self.σs, self.σsc, self.check = result
             self.M = 0
             self.rs_ratio = 0
+        
+        # 新增：是否地震作用组合
+        self.is_seismic = is_seismic
         
         super().__init__(num, param, result)
     
@@ -123,6 +126,8 @@ class RectBeamReport(BeamReportBase):
         return "=====矩形截面梁已知配筋计算抗弯承载力====="
     
     def _get_input_params_section(self):
+        # 是否地震作用组合
+        is_seismic_text = "是" if self.is_seismic == 1 else "否"
         return f"""1.1 梁宽b：{self.b}mm
 1.2 梁高h：{self.h}mm
 1.3 混凝土:强度等级C{self.fcuk}，抗压强度设计值fc={self.fc:.1f}N/mm²
@@ -133,7 +138,8 @@ class RectBeamReport(BeamReportBase):
 1.8 受拉钢筋保护计算厚度as：{self.ast}mm
 1.9 受压钢筋保护计算厚度as'：{self.asc}mm
 1.10 弯矩设计值M：{self.M:.1f}kN·m
-1.11 结构重要性系数γ0：{self.γ0:.1f}"""
+1.11 是否地震作用组合：{is_seismic_text}
+1.12 结构重要性系数γ0：{self.γ0:.1f}"""
     
     def _get_calculation_results_section(self):
         return f"""2.1 混凝土受压区高度x={self.x}mm
@@ -147,7 +153,7 @@ class RectBeamReport(BeamReportBase):
 2.9 抗力效应比R/S={self.rs_ratio:.2f}"""
 
 class TBeamReport(BeamReportBase):
-    def __init__(self, num, param, result):
+    def __init__(self, num, param, result, is_seismic=0):
         self.b, self.h, self.bf, self.hf, self.fcuk, self.fy_grade, \
         self.fyc_grade, self.Ast, self.ast, self.Asc, self.asc, self.γ0 = param
         
@@ -160,6 +166,9 @@ class TBeamReport(BeamReportBase):
             self.σs, self.σsc, self.check = result
             self.M = 0
             self.rs_ratio = 0
+        
+        # 新增：是否地震作用组合
+        self.is_seismic = is_seismic
         
         super().__init__(num, param, result)
     
@@ -194,6 +203,8 @@ class TBeamReport(BeamReportBase):
         return "=====T形截面梁已知配筋计算抗弯承载力====="
     
     def _get_input_params_section(self):
+        # 是否地震作用组合
+        is_seismic_text = "是" if self.is_seismic == 1 else "否"
         return f"""1.1 梁宽b：{self.b}mm
 1.2 梁高h：{self.h}mm
 1.3 受压翼缘宽度bf'：{self.bf}mm
@@ -206,7 +217,8 @@ class TBeamReport(BeamReportBase):
 1.10 受拉钢筋保护计算厚度as：{self.ast}mm
 1.11 受压钢筋保护计算厚度as'：{self.asc}mm
 1.12 弯矩设计值M：{self.M:.1f}kN·m
-1.13 结构重要性系数γ0：{self.γ0:.1f}"""
+1.13 是否地震作用组合：{is_seismic_text}
+1.14 结构重要性系数γ0：{self.γ0:.1f}"""
     
     def _get_calculation_results_section(self):
         return f"""2.1 T形截面类型判别：{self.flag}
@@ -220,11 +232,11 @@ class TBeamReport(BeamReportBase):
 2.9 受拉钢筋应力σs ={self.σs:.1f}N/mm²
 2.10 抗力效应比R/S={self.rs_ratio:.2f}"""
 
-# 保持原有函数接口兼容
-def report_beam_rect_fc(num, param, result):
-    report = RectBeamReport(num, param, result)
+# 保持原有函数接口兼容，同时支持is_seismic参数
+def report_beam_rect_fc(num, param, result, is_seismic=0):
+    report = RectBeamReport(num, param, result, is_seismic)
     return report.generate_report()
 
-def report_beam_t_fc(num, param, result):
-    report = TBeamReport(num, param, result)
+def report_beam_t_fc(num, param, result, is_seismic=0):
+    report = TBeamReport(num, param, result, is_seismic)
     return report.generate_report()

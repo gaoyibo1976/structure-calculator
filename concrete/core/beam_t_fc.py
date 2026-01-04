@@ -46,10 +46,8 @@ def beam_t_fc(b: float, h: float, bf: float, hf: float, fcuk: float, fy_grade: s
     :raises GeometryError: 几何参数错误时抛出异常
     """
     # ========== 1. 参数校验 ==========
-    if b <= 0 or h <= 0 or bf <= 0 or hf <= 0:
+    if b < 0 or h < 0 or bf < 0 or hf < 0:
         raise ParameterError("截面尺寸必须大于0", parameter=f"b={b}, h={h}, bf={bf}, hf={hf}")
-    if bf < b:
-        raise ParameterError("翼缘宽度必须大于等于腹板宽度", parameter=f"bf={bf}, b={b}")
     if hf >= h:
         raise ParameterError("翼缘高度必须小于梁总高度", parameter=f"hf={hf}, h={h}")
     if Ast < 0 or Asc < 0:
