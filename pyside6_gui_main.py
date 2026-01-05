@@ -72,7 +72,17 @@ class BeamCalculationGUI(QMainWindow):
         # 创建状态栏
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
+        
+        # 将状态栏分为两个部分：左侧显示提示信息，右侧显示计算结果
         self.status_bar.showMessage("就绪")
+        
+        # 创建计算结果显示标签
+        self.result_status_label = QLabel(" ")
+        self.result_status_label.setAlignment(Qt.AlignRight)
+        self.result_status_label.setMinimumWidth(300)  # 设置最小宽度，确保内容完整显示
+        
+        # 添加到状态栏右侧
+        self.status_bar.addPermanentWidget(self.result_status_label)
         
         # 为控件添加悬停提示信息
         self.setup_tooltips()
@@ -138,11 +148,11 @@ class BeamCalculationGUI(QMainWindow):
     def eventFilter(self, obj, event):
         """事件过滤器，处理鼠标悬停事件和回车键响应"""
         if event.type() == QEvent.Enter:
-            # 鼠标进入控件，显示提示信息
+            # 鼠标进入控件，显示提示信息（只更新左侧临时状态栏）
             if obj in self.tooltip_dict:
                 self.status_bar.showMessage(self.tooltip_dict[obj])
         elif event.type() == QEvent.Leave:
-            # 鼠标离开控件，恢复默认状态
+            # 鼠标离开控件，恢复默认状态（只更新左侧临时状态栏）
             self.status_bar.showMessage("就绪")
         elif event.type() == QEvent.KeyPress and event.key() == Qt.Key_Return:
             # 回车键响应：先保存参数，更新列表，再执行计算
@@ -394,9 +404,8 @@ class BeamCalculationGUI(QMainWindow):
         right_group = QGroupBox("批量计算")
         right_layout = QVBoxLayout(right_group)
         
-        # 默认工作目录：我的文档下的work目录
-        user_home = os.path.expanduser("~")
-        self.default_work_dir = os.path.join(user_home, "Documents", "work")
+        # 默认工作目录：D:\Work
+        self.default_work_dir = "D:\\Work"
         if not os.path.exists(self.default_work_dir):
             os.makedirs(self.default_work_dir, exist_ok=True)
         
@@ -1113,14 +1122,17 @@ class BeamCalculationGUI(QMainWindow):
                 # 显示结果
                 self.result_text.append(report + "\n")
                 
-                # 在状态栏显示重要结果
+                # 在左侧状态栏显示临时提示
+                self.status_bar.showMessage("计算完成")
+                
+                # 在右侧永久状态栏区域显示计算结果
                 # 确定抗弯承载力的显示名称
                 mu_label = "MuE" if is_seismic == 1 else "Mu"
                 mu_value = M_out if is_seismic == 1 else Mu
                 
-                # 构建状态栏消息
-                status_msg = f"计算完成 | 受压区高度x={x:.2f}mm | {mu_label}={mu_value:.2f}kN·m | R/S={rs_ratio:.4f}"
-                self.status_bar.showMessage(status_msg)
+                # 构建计算结果消息，包含构件编号
+                result_msg = f"构件: {sec_num} | x={x:.2f}mm | {mu_label}={mu_value:.2f}kN·m | R/S={rs_ratio:.4f}"
+                self.result_status_label.setText(result_msg)
                 
                 # 生成结果文件（如果勾选了输出结果文件）
                 if hasattr(self, 'output_result_var') and self.output_result_var.isChecked():
@@ -1240,9 +1252,13 @@ class BeamCalculationGUI(QMainWindow):
             # 滚动到顶部
             self.result_text.verticalScrollBar().setValue(0)
             
-            # 构建详细的状态栏消息
+            # 在左侧状态栏显示临时提示
             status_msg = f"批量计算完成 | 总截面数: {total_count} | 成功: {total_count - error_count} | 失败: {error_count}"
             self.status_bar.showMessage(status_msg)
+            
+            # 在右侧永久状态栏区域显示批量计算总结
+            result_msg = f"批量计算完成 | 构件数: {total_count} | 成功: {total_count - error_count} | 失败: {error_count}"
+            self.result_status_label.setText(result_msg)
             
         except FileNotFoundError as e:
             error_msg = f"文件不存在: {str(e)}"
