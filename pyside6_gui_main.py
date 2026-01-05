@@ -1130,8 +1130,8 @@ class BeamCalculationGUI(QMainWindow):
                 mu_label = "MuE" if is_seismic == 1 else "Mu"
                 mu_value = M_out if is_seismic == 1 else Mu
                 
-                # 构建计算结果消息，包含构件编号
-                result_msg = f"构件: {sec_num} | x={x:.2f}mm | {mu_label}={mu_value:.2f}kN·m | R/S={rs_ratio:.4f}"
+                # 构建计算结果消息，包含截面编号
+                result_msg = f"编号: {sec_num} | x={x:.2f}mm | {mu_label}={mu_value:.2f}kN·m | R/S={rs_ratio:.4f}"
                 self.result_status_label.setText(result_msg)
                 
                 # 生成结果文件（如果勾选了输出结果文件）
