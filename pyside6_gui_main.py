@@ -106,6 +106,8 @@ class BeamCalculationGUI(QMainWindow):
             self.as_c_input: "受压钢筋重心到截面受压边缘的距离，单位：mm",
             self.m_input: "弯矩设计值，单位：kN·m",
             self.seismic_combo: "是否考虑地震作用组合",
+            self.seismic_level_combo: "抗震等级，一级到四级",
+            self.is_beam_end_combo: "是否为框架梁端",
             self.gamma0_input: "结构重要性系数，一级1.1，二级1.0，三级0.9",
             
             # 右侧批量计算面板
@@ -116,6 +118,7 @@ class BeamCalculationGUI(QMainWindow):
             self.result_text: "计算结果输出区域",
             self.save_data_button: "将数据修改保存到数据文件",
             self.add_data_button: "新增截面数据",
+            self.delete_data_button: "删除选中的截面数据",
             
             # 按钮
             self.calc_button: "进行单个截面抗弯承载力计算",
@@ -166,6 +169,8 @@ class BeamCalculationGUI(QMainWindow):
             self.as_c_input,
             self.m_input,
             self.seismic_combo,
+            self.seismic_level_combo,
+            self.is_beam_end_combo,
             self.gamma0_input
         ]
         
@@ -335,6 +340,26 @@ class BeamCalculationGUI(QMainWindow):
         seismic_layout.addWidget(self.seismic_combo)
         left_layout.addLayout(seismic_layout)
         
+        # 抗震等级
+        seismic_level_layout = QHBoxLayout()
+        seismic_level_label = QLabel("抗震等级:")
+        self.seismic_level_combo = QComboBox()
+        self.seismic_level_combo.addItems(["一级", "二级", "三级", "四级"])
+        self.seismic_level_combo.setFixedWidth(100)
+        seismic_level_layout.addWidget(seismic_level_label)
+        seismic_level_layout.addWidget(self.seismic_level_combo)
+        left_layout.addLayout(seismic_level_layout)
+        
+        # 是否框架梁端
+        is_beam_end_layout = QHBoxLayout()
+        is_beam_end_label = QLabel("是否框架梁端:")
+        self.is_beam_end_combo = QComboBox()
+        self.is_beam_end_combo.addItems(["否", "是"])
+        self.is_beam_end_combo.setFixedWidth(100)
+        is_beam_end_layout.addWidget(is_beam_end_label)
+        is_beam_end_layout.addWidget(self.is_beam_end_combo)
+        left_layout.addLayout(is_beam_end_layout)
+        
         # 结构重要性系数 γ0
         gamma0_layout = QHBoxLayout()
         gamma0_label = QLabel("结构重要性系数 γ0:")
@@ -411,6 +436,12 @@ class BeamCalculationGUI(QMainWindow):
         self.add_data_button.setFixedWidth(80)
         self.add_data_button.clicked.connect(self.add_new_data)
         result_file_layout.addWidget(self.add_data_button)
+        
+        # 添加删除数据按钮
+        self.delete_data_button = QPushButton("删除数据")
+        self.delete_data_button.setFixedWidth(80)
+        self.delete_data_button.clicked.connect(self.delete_selected_data)
+        result_file_layout.addWidget(self.delete_data_button)
         right_layout.addLayout(result_file_layout)
         
         # 输出结果文件复选框
@@ -597,6 +628,15 @@ class BeamCalculationGUI(QMainWindow):
         seismic_text = "是" if is_seismic == 1 else "否"
         self.seismic_combo.setCurrentText(seismic_text)
         
+        # 更新抗震等级
+        seismic_level = data.get("seismic_level", data.get("抗震等级", "二级"))
+        self.seismic_level_combo.setCurrentText(seismic_level)
+        
+        # 更新是否框架梁端
+        is_beam_end = data.get("is_beam_end", data.get("是否框架梁端", 0))
+        beam_end_text = "是" if is_beam_end == 1 else "否"
+        self.is_beam_end_combo.setCurrentText(beam_end_text)
+        
         # 更新结构重要性系数
         self.gamma0_input.setText(str(data.get("γ0", data.get("gamma0", data.get("结构重要性系数", 1.0)))))
         
@@ -623,6 +663,8 @@ class BeamCalculationGUI(QMainWindow):
                 as_c = float(self.as_c_input.text())
                 M = float(self.m_input.text())
                 is_seismic = 1 if self.seismic_combo.currentText() == "是" else 0
+                seismic_level = self.seismic_level_combo.currentText()
+                is_beam_end = 1 if self.is_beam_end_combo.currentText() == "是" else 0
                 gamma0 = float(self.gamma0_input.text())
                 
                 # 如果截面编号为空，使用默认值
@@ -646,6 +688,10 @@ class BeamCalculationGUI(QMainWindow):
                     "是否地震": is_seismic,
                     "地震作用组合": is_seismic,
                     "是否地震作用组合": is_seismic,
+                    "抗震等级": seismic_level,
+                    "seismic_level": seismic_level,
+                    "是否框架梁端": is_beam_end,
+                    "is_beam_end": is_beam_end,
                     "sec_type": sec_type,
                     "截面类型": sec_type,
                     "b": b,
@@ -828,6 +874,44 @@ class BeamCalculationGUI(QMainWindow):
             
         except Exception as e:
             error_msg = f"新增数据失败: {str(e)}"
+            self.status_bar.showMessage(error_msg)
+            self.result_text.append(error_msg + "\n")
+    
+    def delete_selected_data(self):
+        """删除选中的数据"""
+        try:
+            # 获取当前选中的列表项
+            current_item = self.section_list.currentItem()
+            if not current_item:
+                self.status_bar.showMessage("请先选择要删除的截面数据")
+                return
+            
+            # 获取选中项的索引
+            index = self.section_list.row(current_item)
+            if 0 <= index < len(self.section_data):
+                # 获取要删除的截面编号
+                sec_num = self.section_data[index].get("sec_num", self.section_data[index].get("截面编号", f"截面{index+1}"))
+                
+                # 从数据存储和列表框中删除
+                del self.section_data[index]
+                self.section_list.takeItem(index)
+                
+                # 更新列表项的显示文本（重新编号）
+                for i in range(self.section_list.count()):
+                    item = self.section_list.item(i)
+                    new_sec_num = self.section_data[i].get("sec_num", self.section_data[i].get("截面编号", f"截面{i+1}"))
+                    item.setText(f"{i+1}-{new_sec_num}")
+                
+                # 如果还有数据，自动选中第一个截面
+                if self.section_data:
+                    self.section_list.setCurrentRow(0)
+                    self.on_list_item_clicked(self.section_list.currentItem())
+                
+                self.status_bar.showMessage(f"已删除截面数据: {sec_num}")
+                self.result_text.append(f"已删除截面数据: {sec_num}\n")
+        
+        except Exception as e:
+            error_msg = f"删除数据失败: {str(e)}"
             self.status_bar.showMessage(error_msg)
             self.result_text.append(error_msg + "\n")
     
@@ -1027,8 +1111,16 @@ class BeamCalculationGUI(QMainWindow):
                 self.result_text.append(f"计算错误: {error_msg}\n")
             else:
                 # 显示结果
-                self.status_bar.showMessage("单个截面计算完成")
                 self.result_text.append(report + "\n")
+                
+                # 在状态栏显示重要结果
+                # 确定抗弯承载力的显示名称
+                mu_label = "MuE" if is_seismic == 1 else "Mu"
+                mu_value = M_out if is_seismic == 1 else Mu
+                
+                # 构建状态栏消息
+                status_msg = f"计算完成 | 受压区高度x={x:.2f}mm | {mu_label}={mu_value:.2f}kN·m | R/S={rs_ratio:.4f}"
+                self.status_bar.showMessage(status_msg)
                 
                 # 生成结果文件（如果勾选了输出结果文件）
                 if hasattr(self, 'output_result_var') and self.output_result_var.isChecked():
@@ -1148,7 +1240,9 @@ class BeamCalculationGUI(QMainWindow):
             # 滚动到顶部
             self.result_text.verticalScrollBar().setValue(0)
             
-            self.status_bar.showMessage(f"批量计算完成，共 {total_count} 个截面")
+            # 构建详细的状态栏消息
+            status_msg = f"批量计算完成 | 总截面数: {total_count} | 成功: {total_count - error_count} | 失败: {error_count}"
+            self.status_bar.showMessage(status_msg)
             
         except FileNotFoundError as e:
             error_msg = f"文件不存在: {str(e)}"
