@@ -127,8 +127,8 @@ class BeamCalculationGUI(QMainWindow):
             self.section_list: "显示数据文件中的截面列表",
             self.result_text: "计算结果输出区域",
             self.save_data_button: "将数据修改保存到数据文件",
-            self.add_data_button: "新增截面数据",
-            self.delete_data_button: "删除选中的截面数据",
+            self.add_data_button: "新增截面",
+            self.delete_data_button: "删除选中的截面",
             
             # 按钮
             self.calc_button: "进行单个截面抗弯承载力计算",
@@ -440,16 +440,16 @@ class BeamCalculationGUI(QMainWindow):
         self.save_data_button.clicked.connect(self.save_data_to_file)
         result_file_layout.addWidget(self.save_data_button)
         
-        # 添加新增数据按钮
-        self.add_data_button = QPushButton("新增数据")
+        # 添加新增截面按钮
+        self.add_data_button = QPushButton("新增截面")
         self.add_data_button.setFixedWidth(80)
-        self.add_data_button.clicked.connect(self.add_new_data)
+        self.add_data_button.clicked.connect(self.add_new_section)
         result_file_layout.addWidget(self.add_data_button)
         
-        # 添加删除数据按钮
-        self.delete_data_button = QPushButton("删除数据")
+        # 添加删除截面按钮
+        self.delete_data_button = QPushButton("删除截面")
         self.delete_data_button.setFixedWidth(80)
-        self.delete_data_button.clicked.connect(self.delete_selected_data)
+        self.delete_data_button.clicked.connect(self.delete_selected_section)
         result_file_layout.addWidget(self.delete_data_button)
         right_layout.addLayout(result_file_layout)
         
@@ -755,8 +755,8 @@ class BeamCalculationGUI(QMainWindow):
         # 初始加载默认数据文件到列表框
         self.load_data_file_to_list(self.default_data_file)
         
-    def add_new_data(self):
-        """新增数据，自动增加一个列表，并赋予默认参数"""
+    def add_new_section(self):
+        """新增截面，自动增加一个列表，并赋予默认参数"""
         try:
             # 先保存当前参数到section_data
             self.save_current_params_to_data()
@@ -886,8 +886,8 @@ class BeamCalculationGUI(QMainWindow):
             self.status_bar.showMessage(error_msg)
             self.result_text.append(error_msg + "\n")
     
-    def delete_selected_data(self):
-        """删除选中的数据"""
+    def delete_selected_section(self):
+        """删除选中的截面"""
         try:
             # 获取当前选中的列表项
             current_item = self.section_list.currentItem()
